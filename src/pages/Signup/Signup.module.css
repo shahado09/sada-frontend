@@ -1,0 +1,79 @@
+.page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.card {
+  width: 100%;
+  max-width: 420px;
+  background: #ffffff;
+  border: 1px solid #e6e6e6;
+  border-radius: 14px;
+  padding: 22px;
+}
+
+.title {
+  margin: 0 0 14px;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.form {
+  display: grid;
+  gap: 12px;
+}
+
+.input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #3b4f7f;
+}
+
+.button {
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  background: #3b4f7f;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.msg {
+  margin-top: 12px;
+  font-size: 14px;
+}
+
+.success {
+  color: #16794c;
+}
+
+.error {
+  color: #b42318;
+}
+.errorText {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: #b42318;
+}
+
+.successText {
+  margin-top: 12px;
+  font-size: 14px;
+  color: #16794c;
+}
+
