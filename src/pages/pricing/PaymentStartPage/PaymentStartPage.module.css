@@ -1,0 +1,60 @@
+.page {
+  padding: 28px;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.title {
+  margin: 0 0 14px;
+  font-size: 26px;
+}
+
+.box {
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 16px;
+  padding: 18px;
+  background: rgba(255,255,255,0.04);
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 10px;
+}
+
+.label {
+  opacity: 0.8;
+}
+
+.value {
+  font-weight: 700;
+}
+
+.note {
+  margin: 0;
+  opacity: 0.85;
+  font-size: 14px;
+}
+
+.actions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn, .btnGhost {
+  border: none;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btnGhost {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.18);
+}
+.msg {
+  opacity: 0.85;
+}

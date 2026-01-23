@@ -24,7 +24,7 @@ export default function Login() {
       await login({ email, password });
       setMsg("Logged in!");
       setIsError(false);
-      navigate("/");
+      navigate("/dashboard");
     } catch (err) {
       setMsg(err.response?.data?.message || "Login failed");
       setIsError(true);
