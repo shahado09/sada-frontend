@@ -46,6 +46,7 @@ export default function ProjectsList() {
 
   return (
     <div className={styles.page}>
+
       <div className={styles.card}>
         <div className={styles.header}>
           <h2 className={styles.title}>Projects</h2>

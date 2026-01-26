@@ -1,0 +1,27 @@
+.card{
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.04);
+  border-radius:16px;
+  padding:18px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;}
+.title{margin:0;font-size:18px;}
+.amount{font-weight:900;}
+.desc{margin:0;opacity:.85;font-size:14px;}
+.pointsRow{
+  border-top:1px solid rgba(255,255,255,.12);
+  padding-top:12px;
+  display:flex;
+  gap:8px;
+  align-items:baseline;
+}
+.points{font-size:22px;font-weight:900;}
+.pointsLabel{font-size:13px;opacity:.85;}
+.cta{
+  border:none;border-radius:12px;
+  padding:12px 14px;
+  font-weight:800;cursor:pointer;
+}

@@ -1,60 +1,58 @@
-.page {
-  padding: 28px;
-  max-width: 700px;
-  margin: 0 auto;
+.page{
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  padding: var(--pad);
+  padding-top: clamp(18px, 3vw, 34px);
+  display: grid;
+  place-items: center;
 }
 
-.title {
-  margin: 0 0 14px;
-  font-size: 26px;
+@media (max-width: 768px){
+  .page{ padding-top: 92px; place-items: start center; }
 }
 
-.box {
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 16px;
-  padding: 18px;
-  background: rgba(255,255,255,0.04);
+.card{
+  width: min(720px, 100%);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: calc(var(--radius) + 10px);
+  box-shadow: var(--shadow-soft);
+  padding: 22px;
+  position: relative;
+  overflow: hidden;
+  text-align: center;
 }
 
-.row {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  margin: 0 0 10px;
+.card::before{
+  content:"";
+  position:absolute;
+  inset:-2px;
+  background:
+    radial-gradient(circle at 20% 35%, rgba(43,108,176,0.16), transparent 55%),
+    radial-gradient(circle at 80% 70%, rgba(43,108,176,0.08), transparent 60%);
+  pointer-events:none;
 }
 
-.label {
-  opacity: 0.8;
-}
-
-.value {
-  font-weight: 700;
-}
-
-.note {
+.title{
   margin: 0;
-  opacity: 0.85;
-  font-size: 14px;
+  font-size: clamp(18px, 2.5vw, 22px);
+  font-weight: 900;
+  position: relative;
+  z-index: 1;
 }
 
-.actions {
-  margin-top: 14px;
-  display: flex;
-  justify-content: flex-end;
+.msg{
+  margin: 10px 0 0;
+  color: var(--muted);
+  position: relative;
+  z-index: 1;
 }
 
-.btn, .btnGhost {
-  border: none;
-  border-radius: 12px;
-  padding: 12px 14px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.btnGhost {
-  background: transparent;
-  border: 1px solid rgba(255,255,255,0.18);
-}
-.msg {
-  opacity: 0.85;
+.err{
+  margin: 10px 0 0;
+  color: rgba(176, 43, 24, 0.92);
+  font-weight: 900;
+  position: relative;
+  z-index: 1;
 }

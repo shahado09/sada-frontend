@@ -1,0 +1,102 @@
+.page{
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  padding: var(--pad);
+  padding-top: clamp(18px, 3vw, 34px);
+}
+
+@media (max-width: 768px){
+  .page{ padding-top: 92px; }
+}
+
+.title{
+  width: min(720px, 100%);
+  margin: 0 auto 14px;
+  font-size: clamp(22px, 4vw, 36px);
+  font-family: ui-serif, Georgia, serif;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
+.card{
+  width: min(720px, 100%);
+  margin: 0 auto;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: calc(var(--radius) + 10px);
+  box-shadow: var(--shadow-soft);
+  padding: 18px;
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before{
+  content:"";
+  position:absolute;
+  inset:-2px;
+  background:
+    radial-gradient(circle at 18% 28%, rgba(43,108,176,0.14), transparent 55%),
+    radial-gradient(circle at 82% 72%, rgba(43,108,176,0.08), transparent 60%);
+  pointer-events:none;
+}
+
+.row{
+  display:flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  position: relative;
+  z-index: 1;
+}
+
+.msg{
+  margin: 8px 0 0;
+  color: var(--muted);
+  position: relative;
+  z-index: 1;
+}
+
+.ok{
+  margin: 10px 0 0;
+  color: rgba(22, 121, 76, 0.92);
+  font-weight: 900;
+  position: relative;
+  z-index: 1;
+}
+
+.err{
+  margin: 10px 0 0;
+  color: rgba(176, 43, 24, 0.92);
+  font-weight: 900;
+  position: relative;
+  z-index: 1;
+}
+
+.reason{
+  margin: 10px 0 0;
+  color: var(--muted);
+  position: relative;
+  z-index: 1;
+}
+
+.btn{
+  margin-top: 12px;
+  width: 100%;
+  border: 1px solid rgba(43,108,176,0.35);
+  background: rgba(43,108,176,0.14);
+  color: var(--text);
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease), background var(--dur) var(--ease);
+  position: relative;
+  z-index: 1;
+}
+
+.btn:hover{
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-soft);
+  background: rgba(43,108,176,0.18);
+}

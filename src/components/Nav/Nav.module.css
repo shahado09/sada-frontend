@@ -1,0 +1,306 @@
+.nav{
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  padding: 14px var(--pad);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+/* Dark */
+[data-theme="dark"] .nav{
+  background: #061726;
+  border-bottom: 1px solid rgba(244,238,230,0.12);
+}
+
+.brand{
+  text-decoration:none;
+  color: var(--text);
+  font-family: ui-serif, Georgia, serif;
+  letter-spacing: 0.10em;
+  font-size: 20px;
+}
+
+/* ===============================
+   Desktop Links
+   =============================== */
+.links{
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.link{
+  text-decoration:none;
+  color: var(--muted);
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  padding: 10px 12px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  transition: transform var(--dur) var(--ease),
+              background var(--dur) var(--ease),
+              color var(--dur) var(--ease),
+              border-color var(--dur) var(--ease),
+              box-shadow var(--dur) var(--ease);
+}
+
+.link:hover{
+  color: var(--text);
+  background: var(--surface-2);
+  border-color: var(--border);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-soft);
+}
+
+/* Active link (إذا تستخدمين NavLink تقدرين تعطينه className active) */
+.active{
+  color: var(--bg);
+  background: var(--text);
+  border-color: color-mix(in srgb, var(--text) 75%, var(--border));
+  box-shadow: var(--shadow-soft);
+}
+
+/* ===============================
+   Buttons (Theme Toggle / Logout / Any nav button)
+   =============================== */
+.btn{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  height: 40px;
+  padding: 0 14px;
+
+  border-radius: 999px;
+  border: 1px solid rgba(43,108,176,0.35);
+  background: rgba(43,108,176,0.14);
+  color: var(--text);
+
+  font-weight: 950;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+
+  cursor: pointer;
+
+  transition: transform var(--dur) var(--ease),
+              background var(--dur) var(--ease),
+              box-shadow var(--dur) var(--ease),
+              border-color var(--dur) var(--ease),
+              filter var(--dur) var(--ease);
+}
+
+.btn:hover{
+  transform: translateY(-1px);
+  background: rgba(43,108,176,0.18);
+  box-shadow: var(--shadow-soft);
+  filter: brightness(1.02);
+}
+
+.btn:active{
+  transform: translateY(0px);
+}
+
+.btn:focus{
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(43,108,176,0.14), var(--shadow-soft);
+}
+
+.ghostBtn{
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.dangerBtn{
+  border: 1px solid rgba(176,43,24,0.28);
+  background: rgba(176,43,24,0.10);
+}
+
+/* Dark tweak: خلي الأزرار أوضح */
+[data-theme="dark"] .btn{
+  border-color: rgba(244,238,230,0.18);
+  background: rgba(244,238,230,0.08);
+}
+
+[data-theme="dark"] .btn:hover{
+  background: rgba(244,238,230,0.12);
+}
+
+/* ===============================
+   Hamburger
+   =============================== */
+.burger{
+  display:none;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-soft);
+  align-items: center;
+  justify-content: center;
+}
+
+.burgerLines{ display:flex; flex-direction: column; gap: 5px; }
+.burgerLines span{
+  width: 18px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--text);
+  opacity: 0.9;
+}
+
+/* ===============================
+   Overlay + Drawer
+   =============================== */
+.panel{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur) var(--ease);
+}
+.panelOpen{
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.drawer{
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: min(360px, 88vw);
+  padding: 18px;
+
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow);
+
+  transform: translateX(18px);
+  transition: transform var(--dur) var(--ease);
+}
+
+[data-theme="dark"] .drawer{
+  background: #071c2d;
+  border-left: 1px solid rgba(244,238,230,0.12);
+}
+
+.panelOpen .drawer{ transform: translateX(0); }
+
+.drawerTop{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.drawerTitle{
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.drawerClose{
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  cursor: pointer;
+  transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+
+.drawerClose:hover{
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-soft);
+}
+
+.drawerLinks{
+  margin-top: 18px;
+  display:flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Drawer links look like buttons */
+.drawerLinks .link{
+  width: 100%;
+  text-align: left;
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+
+/* Drawer buttons full width */
+.drawerLinks .btn{
+  width: 100%;
+}
+
+/* ===============================
+   Credits badge
+   =============================== */
+.creditsBadge{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  height: 40px;
+  padding: 0 12px;
+
+  border: 1px solid var(--border);
+  border-radius: 999px;
+
+  background: var(--surface-2);
+  box-shadow: var(--shadow-soft);
+
+  font-size: 13px;
+}
+
+.creditsLabel{
+  color: var(--muted);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+}
+
+.creditsValue{
+  font-weight: 950;
+  letter-spacing: 0.02em;
+}
+
+/* Mobile credits */
+.mobileCredits{
+  margin: 8px 0 4px;
+  padding: 12px 12px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-soft);
+  font-size: 14px;
+}
+
+/* ===============================
+   Mobile
+   =============================== */
+@media (max-width: 768px){
+  .nav{
+    position: fixed;
+    left:0; right:0; top:0;
+  }
+  .links{ display:none; }
+  .burger{ display:inline-flex; }
+}
+
+/* Very small screens: tighten spacing */
+@media (max-width: 420px){
+  .brand{ font-size: 18px; }
+  .burger{ width: 42px; height: 42px; }
+  .drawer{ width: min(340px, 92vw); }
+}

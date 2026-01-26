@@ -1,60 +1,38 @@
 import { Link } from "react-router-dom";
-import { useAuth } from "../../auth/AuthContext";
 import styles from "./Dashboard.module.css";
 
-export default function Dashboard() {
-  const { user, logout } = useAuth();
+import logo from "../../assets/sada-logo.png"; // <-- عدلي المسار/الاسم
 
+export default function Dashboard() {
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
-        <div>
-          <h1 className={styles.title}>Dashboard</h1>
-          <p className={styles.subtitle}>
-            Welcome{user?.email ? `, ${user.email}` : ""} 👋
-          </p>
-        </div>
 
-        <button className={styles.logout} onClick={logout}>
-          Logout
-        </button>
-      </header>
+      <main className={styles.main}>
+        <section className={styles.hero}>
+          <img className={styles.logo} src={logo} alt="SADA" />
 
-      <section className={styles.grid}>
-        <Link className={styles.card} to="/projects">
-          <div className={styles.cardTitle}>Projects</div>
-          <div className={styles.cardDesc}>View and manage your projects</div>
-        </Link>
+          <div className={styles.cards}>
+            <Link className={styles.card} to="/generate/cloth">
+              <div className={styles.cardTitle}>Cloth AI</div>
+              <div className={styles.cardDesc}>Generate fashion visuals for outfits.</div>
+              <div className={styles.cardHint}>Start →</div>
+            </Link>
 
-        <Link className={styles.card} to="/projects/new">
-          <div className={styles.cardTitle}>Create Project</div>
-          <div className={styles.cardDesc}>Start a new campaign/project</div>
-        </Link>
+            <Link className={styles.card} to="/generate/product">
+              <div className={styles.cardTitle}>Product AI</div>
+              <div className={styles.cardDesc}>Create premium product shots & ads.</div>
+              <div className={styles.cardHint}>Start →</div>
+            </Link>
 
-        <Link className={styles.card} to="/plans">
-          <div className={styles.cardTitle}>Plans</div>
-          <div className={styles.cardDesc}>
-            View available subscription plans
+            <Link className={styles.card} to="/generate/creator">
+              <div className={styles.cardTitle}>Creator AI</div>
+              <div className={styles.cardDesc}>Content for creators: reels, posters, edits.</div>
+              <div className={styles.cardHint}>Start →</div>
+            </Link>
           </div>
-        </Link>
-
-        <Link className={styles.card} to="/packs">
-          <div className={styles.cardTitle}>Credit Packs </div>
-          <div className={styles.cardDesc}>
-            Buy one-time credit packs
-          </div>
-        </Link>
-
-        <div className={`${styles.card} ${styles.disabled}`}>
-          <div className={styles.cardTitle}>Generation Requests</div>
-          <div className={styles.cardDesc}></div>
-        </div>
-
-        <div className={`${styles.card} ${styles.disabled}`}>
-          <div className={styles.cardTitle}>Outputs</div>
-          <div className={styles.cardDesc}></div>
-        </div>
-      </section>
+        </section>
+      </main>
     </div>
   );
 }
+

@@ -1,40 +1,28 @@
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { createPaymentIntent } from "../../../services/payments";
 import styles from "./PaymentStartPage.module.css";
 
 export default function PaymentStartPage() {
   const { state } = useLocation();
   const navigate = useNavigate();
+  const [err, setErr] = useState("");
 
-  if (!state) {
-    return (
-      <div className={styles.page}>
-        <p className={styles.msg}>No payment request found.</p>
-        <button className={styles.btn} onClick={() => navigate("/dashboard")}>
-          Back to Dashboard
-        </button>
-      </div>
-    );
-  }
-
-  const { type, item } = state;
+  useEffect(() => {
+    if (!state?.type || !state?.itemCode) {
+    navigate("/plans", { replace: true });
+    return;
+    } 
+    console.log("PAYMENT START state:", state);
+    createPaymentIntent({ type: state.type, itemCode: state.itemCode })
+      .then((intent) => navigate(`/payment/${intent._id}`, { replace: true }))
+      .catch((e) => setErr(e?.response?.data?.message || e.message));
+  }, [state, navigate]);
 
   return (
     <div className={styles.page}>
-      <h1 className={styles.title}>Payment</h1>
-
-      <div className={styles.box}>
-        <p className={styles.row}>
-          <span className={styles.label}>{type === "subscription" ? "Plan" : "Pack"}</span>
-          <span className={styles.value}>{item.name}</span>
-        </p>
-
-      </div>
-
-      <div className={styles.actions}>
-        <button className={styles.btnGhost} onClick={() => navigate(-1)}>
-          Back
-        </button>
-      </div>
+      <h1 className={styles.title}>Preparing payment...</h1>
+      {err ? <p className={styles.err}>{err}</p> : <p className={styles.msg}>Please wait</p>}
     </div>
   );
 }

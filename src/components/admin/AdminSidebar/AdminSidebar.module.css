@@ -1,0 +1,91 @@
+.sidebar{
+  width: 260px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  box-shadow: var(--shadow-soft);
+
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  height: 100vh;
+
+  padding: 18px 14px;
+}
+
+.brand{
+  font-family: ui-serif, Georgia, serif;
+  letter-spacing: 0.12em;
+  font-weight: 900;
+  font-size: 14px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-soft);
+}
+
+.nav{
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.link{
+  text-decoration: none;
+  color: var(--muted);
+  font-weight: 900;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  transition: transform var(--dur) var(--ease), background var(--dur) var(--ease), color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+
+.link:hover{
+  transform: translateY(-1px);
+  color: var(--text);
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+
+.active{
+  text-decoration: none;
+  color: var(--bg);
+  font-weight: 900;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--text);
+  border: 1px solid color-mix(in srgb, var(--text) 80%, var(--border));
+}
+
+/* Tablet/Mobile: sidebar يتحول لشريط علوي */
+@media (max-width: 900px){
+  .sidebar{
+    width: 100%;
+    height: auto;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav{
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .link, .active{
+    flex: 1;
+    min-width: 140px;
+    text-align: center;
+  }
+}
+
+@media (max-width: 520px){
+  .link, .active{
+    min-width: 48%;
+  }
+}

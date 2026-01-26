@@ -1,0 +1,48 @@
+.backdrop{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.50);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding: 16px;
+  z-index: 9999;
+}
+
+.modal{
+  width: min(820px, 100%);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: calc(var(--radius) + 10px);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.head{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.title{
+  margin: 0;
+  font-weight: 950;
+  letter-spacing: 0.04em;
+}
+
+.x{
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.body{
+  padding: 16px;
+}

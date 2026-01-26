@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
-import PlanCard from "../../../components/pricing/PlanCard";
+import PlanCard from "../../../components/pricing/PlanCard/PlanCard";
 import { fetchPlans } from "../../../services/plans";
-
 import styles from "./PlansPage.module.css";
+import PricingTabs from "../../../components/PricingTabs/PricingTabs";
 
 export default function PlansPage() {
   const [plans, setPlans] = useState([]);
@@ -12,28 +11,28 @@ export default function PlansPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchPlans()
-      .then(setPlans)
-      .finally(() => setLoading(false));
+    fetchPlans().then(setPlans).finally(() => setLoading(false));
   }, []);
 
   return (
     <div className={styles.page}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>Plans</h1>
-        <p className={styles.subtitle}>Choose a plan to start generating</p>
-      </div>
+    
+      <header className={styles.header}>
+        <h1 className={styles.title}>Choose a plan</h1>
+        <PricingTabs />
+        <p className={styles.sub}>Subscribe for monthly credits & features.</p>
+      </header>
 
       {loading ? (
-        <p className={styles.loading}>Loading plans...</p>
+        <p className={styles.msg}>Loading...</p>
       ) : (
         <div className={styles.grid}>
-          {plans.map((plan) => (
+          {plans.map((p) => (
             <PlanCard
-              key={plan._id}
-              plan={plan}
-              onSubscribe={(p) =>
-                navigate("/payment/start", { state: { type: "subscription", item: p } })
+              key={p._id}
+              plan={p}
+              onSubscribe={(plan) =>
+                navigate("/payment/start", { state: { type: "subscription", itemCode: plan.code } })
               }
             />
           ))}

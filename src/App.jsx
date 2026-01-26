@@ -1,6 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthContext";
 import RequireAuth from "./auth/RequireAuth";
+import RequireAdmin from "./auth/RequireAdmin";
+
+import MainLayout from "./layouts/MainLayout";
 
 import Login from "./pages/Login/Login";
 import Signup from "./pages/Signup/Signup";
@@ -10,27 +13,60 @@ import ProjectsList from "./pages/projects/ProjectsList";
 import CreateProject from "./pages/projects/CreateProject";
 import ProjectDetails from "./pages/projects/ProjectDetails";
 
-import PacksPage from "./pages/pricing/PacksPage/PacksPage";
 import PlansPage from "./pages/pricing/PlansPage/PlansPage";
+import PacksPage from "./pages/pricing/PacksPage/PacksPage";
 import PaymentStartPage from "./pages/pricing/PaymentStartPage/PaymentStartPage";
+import PaymentFormPage from "./pages/pricing/PaymentFormPage/PaymentFormPage";
+import PaymentStatusPage from "./pages/pricing/PaymentStatusPage/PaymentStatusPage";
+
+import AdminLayout from "./pages/admin/AdminLayout/AdminLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard/AdminDashboard";
+import AdminPayments from "./pages/admin/AdminPayments/AdminPayments";
+import AdminPlans from "./pages/admin/AdminPlans/AdminPlans";
+import AdminPacks from "./pages/admin/AdminPacks/AdminPacks";
+import AdminUsers from "./pages/admin/AdminUsers/AdminUsers";
 
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-
+          {/* ✅ بدون ناف */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
 
-          <Route path="/" element={ <RequireAuth><Navigate to="/dashboard" replace /></RequireAuth>}/>
-          <Route path="/dashboard" element={ <RequireAuth><Dashboard /> </RequireAuth>}/>
-          <Route path="/projects"  element={<RequireAuth><ProjectsList /></RequireAuth>}/>
-          <Route path="/projects/new" element={ <RequireAuth><CreateProject /></RequireAuth> }/>
-          <Route path="/projects/:id"element={<RequireAuth><ProjectDetails /></RequireAuth>}/>
-          <Route path="/plans" element={<RequireAuth><PlansPage /></RequireAuth>}/>
-          <Route path="/packs" element={<RequireAuth> <PacksPage /> </RequireAuth>}/>
-          <Route path="/payment/start" element={ <RequireAuth> <PaymentStartPage /> </RequireAuth>}/>
+          {/* ✅ كل الصفحات اللي تبين فيها Nav */}
+          <Route
+            element={
+              <RequireAuth>
+                <MainLayout />
+              </RequireAuth>
+            }
+          >
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+
+            <Route path="/projects" element={<ProjectsList />} />
+            <Route path="/projects/new" element={<CreateProject />} />
+            <Route path="/projects/:id" element={<ProjectDetails />} />
+
+            <Route path="/plans" element={<PlansPage />} />
+            <Route path="/packs" element={<PacksPage />} />
+
+            <Route path="/payment/start" element={<PaymentStartPage />} />
+            <Route path="/payment/:id" element={<PaymentFormPage />} />
+            <Route path="/payment/request/:id" element={<PaymentStatusPage />} />
+          </Route>
+
+        
+          <Route path="/admin" element={  <RequireAdmin> <AdminLayout /> </RequireAdmin> }>
+            <Route index element={<AdminDashboard />} />
+            <Route path="payments" element={<AdminPayments />} />
+            <Route path="plans" element={<AdminPlans />} />
+            <Route path="packs" element={<AdminPacks />} />
+            <Route path="users" element={<AdminUsers />} />
+          </Route>
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
