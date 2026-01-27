@@ -29,7 +29,6 @@ export default function Nav() {
         SADA
       </Link>
 
-      {/* Desktop */}
       <nav className={styles.links}>
         <NavLink className={styles.link} to="/dashboard">
           Home
@@ -47,7 +46,6 @@ export default function Nav() {
           </NavLink>
         )}
 
-        {/* ✅ Credits */}
         {user && (
           <div className={styles.creditsBadge}>
             <span className={styles.creditsLabel}>Credits</span>
@@ -66,7 +64,6 @@ export default function Nav() {
         </Button>
       </nav>
 
-      {/* Mobile burger */}
       <button
         className={styles.burger}
         onClick={() => setOpen(true)}
@@ -79,7 +76,6 @@ export default function Nav() {
         </span>
       </button>
 
-      {/* Mobile drawer */}
       <div
         className={`${styles.panel} ${open ? styles.panelOpen : ""}`}
         onClick={close}
@@ -113,7 +109,7 @@ export default function Nav() {
               </Link>
             )}
 
-            {/* ✅ Credits (Mobile) */}
+
             {user && (
               <div className={styles.mobileCredits}>
                 Credits: <strong>{user.credits ?? 0}</strong>

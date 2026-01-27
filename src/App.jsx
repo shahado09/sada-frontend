@@ -26,16 +26,16 @@ import AdminPlans from "./pages/admin/AdminPlans/AdminPlans";
 import AdminPacks from "./pages/admin/AdminPacks/AdminPacks";
 import AdminUsers from "./pages/admin/AdminUsers/AdminUsers";
 
+import GeneratePage from "./pages/Generate/GeneratePage";
+
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* ✅ بدون ناف */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
 
-          {/* ✅ كل الصفحات اللي تبين فيها Nav */}
           <Route
             element={
               <RequireAuth>
@@ -56,10 +56,49 @@ export default function App() {
             <Route path="/payment/start" element={<PaymentStartPage />} />
             <Route path="/payment/:id" element={<PaymentFormPage />} />
             <Route path="/payment/request/:id" element={<PaymentStatusPage />} />
+
+            <Route
+              path="/generate/fashion"
+              element={
+                <GeneratePage
+                  category="fashion"
+                  title="Cloth AI"
+                  subtitle="Generate fashion visuals with templates or pro prompts."
+                />
+              }
+            />
+
+            <Route
+              path="/generate/product"
+              element={
+                <GeneratePage
+                  category="product"
+                  title="Product AI"
+                  subtitle="Create premium product shots & ads."
+                />
+              }
+            />
+
+            <Route
+              path="/generate/creator"
+              element={
+                <GeneratePage
+                  category="creator"
+                  title="Creator AI"
+                  subtitle="Content for creators: posters, edits, reels."
+                />
+              }
+            />
           </Route>
 
-        
-          <Route path="/admin" element={  <RequireAdmin> <AdminLayout /> </RequireAdmin> }>
+          <Route
+            path="/admin"
+            element={
+              <RequireAdmin>
+                <AdminLayout />
+              </RequireAdmin>
+            }
+          >
             <Route index element={<AdminDashboard />} />
             <Route path="payments" element={<AdminPayments />} />
             <Route path="plans" element={<AdminPlans />} />

@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { deleteProject, getProjectById } from "../../services/projectService";
 import styles from "./Projects.module.css";
+
+import { deleteProject, getProjectById } from "../../services/projectService";
+import OutputsGallery from "../../components/OutputsGallery/OutputsGallery";
 
 export default function ProjectDetails() {
   const { id } = useParams();
@@ -11,6 +13,7 @@ export default function ProjectDetails() {
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState("");
   const [isError, setIsError] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   async function load() {
     try {
@@ -20,7 +23,8 @@ export default function ProjectDetails() {
       const data = await getProjectById(id);
       setProject(data);
     } catch (e) {
-      setMsg(e?.response?.data?.message || "Project not found");
+      setProject(null);
+      setMsg(e?.response?.data?.message || e.message || "Project not found");
       setIsError(true);
     } finally {
       setLoading(false);
@@ -32,14 +36,14 @@ export default function ProjectDetails() {
   }, [id]);
 
   async function handleDelete() {
-    const ok = confirm("Delete this project? You can restore within 30 days.");
+    const ok = confirm("Delete this project?");
     if (!ok) return;
 
     try {
       await deleteProject(id);
       navigate("/projects");
     } catch (e) {
-      setMsg(e?.response?.data?.message || "Delete failed");
+      setMsg(e?.response?.data?.message || e.message || "Delete failed");
       setIsError(true);
     }
   }
@@ -49,27 +53,54 @@ export default function ProjectDetails() {
       <div className={styles.card}>
         <div className={styles.header}>
           <h2 className={styles.title}>Project</h2>
-          <Link className={styles.link} to="/projects">← Back</Link>
+          <Link className={styles.link} to="/projects">
+            ← Back
+          </Link>
         </div>
 
-        {loading && <p className={styles.muted}>Loading...</p>}
         {msg && <p className={`${styles.msg} ${isError ? styles.error : styles.success}`}>{msg}</p>}
+        {loading && <p className={styles.muted}>Loading…</p>}
 
         {!loading && project && (
           <>
-            <p className={styles.muted}><b>Title:</b> {project.title}</p>
-            <p className={styles.muted}><b>Category:</b> {project.category}</p>
+            <div className={styles.item} style={{ marginTop: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 700 }}>
+                    {project.title || project.name || "Untitled"}
+                  </div>
+                  <div className={styles.muted}>Category: {project.category || "-"}</div>
+                </div>
 
-            <div className={styles.rowButtons}>
-              <button className={`${styles.smallBtn} ${styles.danger}`} onClick={handleDelete}>
-                Delete
-              </button>
-              <button className={`${styles.smallBtn} ${styles.ghost}`} onClick={() => navigate("/dashboard")}>
-                Dashboard
-              </button>
+                <div className={styles.rowButtons}>
+                  <button
+                    className={`${styles.smallBtn} ${styles.ghost}`}
+                    onClick={() => setRefreshKey((x) => x + 1)}
+                  >
+                    Refresh Outputs
+                  </button>
+                  <button
+                    className={`${styles.smallBtn} ${styles.danger}`}
+                    onClick={handleDelete}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.item} style={{ marginTop: 14 }}>
+              <div style={{ fontWeight: 700, marginBottom: 10 }}>Outputs</div>
+              <OutputsGallery projectId={id} refreshKey={refreshKey} />
             </div>
           </>
         )}
+
+        <p className={styles.muted} style={{ marginTop: 16 }}>
+          <Link className={styles.link} to="/dashboard">
+            ← Back to Dashboard
+          </Link>
+        </p>
       </div>
     </div>
   );

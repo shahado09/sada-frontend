@@ -1,0 +1,28 @@
+.page {
+  padding: 22px var(--pad);
+}
+
+.header {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.hTitle {
+  font-size: 22px;
+  letter-spacing: 0.08em;
+  font-family: ui-serif, Georgia, serif;
+  color: var(--text);
+}
+
+.hSub {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.shell {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px;
+}

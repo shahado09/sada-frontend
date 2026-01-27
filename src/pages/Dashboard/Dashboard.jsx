@@ -1,18 +1,16 @@
 import { Link } from "react-router-dom";
 import styles from "./Dashboard.module.css";
-
-import logo from "../../assets/sada-logo.png"; // <-- عدلي المسار/الاسم
+import logo from "../../assets/sada-logo.png";
 
 export default function Dashboard() {
   return (
     <div className={styles.page}>
-
       <main className={styles.main}>
         <section className={styles.hero}>
           <img className={styles.logo} src={logo} alt="SADA" />
 
           <div className={styles.cards}>
-            <Link className={styles.card} to="/generate/cloth">
+            <Link className={styles.card} to="/generate/fashion">
               <div className={styles.cardTitle}>Cloth AI</div>
               <div className={styles.cardDesc}>Generate fashion visuals for outfits.</div>
               <div className={styles.cardHint}>Start →</div>
@@ -35,4 +33,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
