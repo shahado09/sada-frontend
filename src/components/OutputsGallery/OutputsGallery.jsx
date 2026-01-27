@@ -44,6 +44,26 @@ export default function OutputsGallery({ projectId, refreshKey, pendingRequestId
     load();
   }, [projectId, refreshKey]);
 
+  useEffect(() => {
+    function handler(e) {
+      const pid = e?.detail?.projectId;
+      const output = e?.detail?.output;
+      if (!pid || !output) return;
+      if (String(pid) !== String(projectId)) return;
+
+      setItems((prev) => {
+        const exists = prev.some((x) => String(x?._id) === String(output?._id));
+        if (exists) return prev;
+        return [output, ...prev];
+      });
+
+      if (typeof onPendingResolved === "function") onPendingResolved();
+    }
+
+    window.addEventListener("output.created", handler);
+    return () => window.removeEventListener("output.created", handler);
+  }, [projectId, onPendingResolved]);
+
   const pendingOutput = useMemo(() => {
     if (!pendingRequestId) return null;
     return items.find((x) => String(x?.request) === String(pendingRequestId)) || null;
@@ -177,3 +197,4 @@ export default function OutputsGallery({ projectId, refreshKey, pendingRequestId
     </div>
   );
 }
+
