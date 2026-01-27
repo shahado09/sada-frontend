@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import api from "../../api/api";
-
 import ProjectPicker from "../../components/ProjectPicker/ProjectPicker";
 import OutputsGallery from "../../components/OutputsGallery/OutputsGallery";
 import styles from "./GenerateImageSection.module.css";
@@ -22,6 +21,35 @@ function mergeUpTo3(prev, incoming) {
   for (const f of prev) map.set(`${f.name}:${f.size}:${f.lastModified}`, f);
   for (const f of incoming) map.set(`${f.name}:${f.size}:${f.lastModified}`, f);
   return Array.from(map.values()).slice(0, 3);
+}
+
+function buildDefaultSelections(template) {
+  const sel = {};
+  const fields = Array.isArray(template?.fields) ? template.fields : [];
+  const options = Array.isArray(template?.options) ? template.options : [];
+
+  for (const f of fields) {
+    if (f.type === "select") {
+      const list = options.filter((o) => o.key === f.key);
+      if (f.allowNone) sel[f.key] = "none";
+      else sel[f.key] = list[0]?.value || "";
+      continue;
+    }
+
+    if (f.type === "text") {
+      sel[f.key] = "";
+      continue;
+    }
+
+    if (f.type === "number") {
+      sel[f.key] = "";
+      continue;
+    }
+
+    sel[f.key] = "";
+  }
+
+  return sel;
 }
 
 export default function GenerateImageSection({ category }) {
@@ -51,7 +79,11 @@ export default function GenerateImageSection({ category }) {
 
   const stopRef = useRef(false);
 
-  const cost = useMemo(() => (quality === "high" ? 4 : 2), [quality]);
+  const cost = useMemo(() => {
+    const normal = Number(selectedTemplate?.pricing?.normalCredits ?? 2);
+    const high = Number(selectedTemplate?.pricing?.highCredits ?? 4);
+    return quality === "high" ? high : normal;
+  }, [quality, selectedTemplate]);
 
   useEffect(() => {
     stopRef.current = false;
@@ -60,9 +92,9 @@ export default function GenerateImageSection({ category }) {
     };
   }, []);
 
-  async function loadTemplates() {
+  async function loadTemplates(section, k) {
     try {
-      const res = await api.get(`/prompt-templates?section=${category}&kind=${kind}`);
+      const res = await api.get(`/prompt-templates?section=${section}&kind=${k}`);
       setTemplates(res.data || []);
     } catch {
       setTemplates([]);
@@ -70,18 +102,24 @@ export default function GenerateImageSection({ category }) {
   }
 
   useEffect(() => {
-    loadTemplates();
+    loadTemplates(category, kind);
   }, [category, kind]);
 
   useEffect(() => {
-    if (!templateCode && templates.length) setTemplateCode(templates[0].code);
-    if (!templates.length) setTemplateCode("");
+    if (!templates.length) {
+      setTemplateCode("");
+      return;
+    }
+    if (!templateCode || !templates.some((t) => t.code === templateCode)) {
+      setTemplateCode(templates[0].code);
+    }
   }, [templates, templateCode]);
 
   useEffect(() => {
     const t = templates.find((x) => x.code === templateCode) || null;
     setSelectedTemplate(t);
-    setSelections({});
+    setSelections(t ? buildDefaultSelections(t) : {});
+    setExtraPrompt("");
   }, [templateCode, templates]);
 
   useEffect(() => {
@@ -89,6 +127,13 @@ export default function GenerateImageSection({ category }) {
     setPreviews(urls);
     return () => urls.forEach((u) => URL.revokeObjectURL(u));
   }, [files]);
+
+  useEffect(() => {
+    if (kind === "t2i") {
+      setFiles([]);
+      setPreviews([]);
+    }
+  }, [kind]);
 
   function onPickFiles(e) {
     const incoming = Array.from(e.target.files || []);
@@ -100,13 +145,17 @@ export default function GenerateImageSection({ category }) {
     setFiles((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  async function pollRefreshWhilePending() {
+  async function pollRefreshWhilePending(rid) {
     for (let i = 0; i < 80; i++) {
       if (stopRef.current) return;
-      if (!pendingRequestId) return;
+      if (!rid) return;
       await new Promise((r) => setTimeout(r, 1500));
       setRefreshKey((x) => x + 1);
     }
+  }
+
+  function setFieldValue(key, value) {
+    setSelections((p) => ({ ...p, [key]: value }));
   }
 
   async function generate() {
@@ -119,11 +168,14 @@ export default function GenerateImageSection({ category }) {
       const payload = { section: category, kind, type, quality, aspectRatio };
 
       if (type === "guided") {
+        if (!templateCode) throw new Error("Please select a template");
         payload.templateCode = templateCode;
         payload.selections = selections;
         payload.extraPrompt = extraPrompt;
       } else {
-        payload.promptText = proPrompt.trim();
+        const p = proPrompt.trim();
+        if (!p) throw new Error("Please write a prompt");
+        payload.promptText = p;
       }
 
       if (kind === "i2i") {
@@ -137,17 +189,15 @@ export default function GenerateImageSection({ category }) {
       }
 
       const res = await api.post(`/projects/${projectId}/generate`, payload);
-
       const rid = res?.data?.requestId || "";
       if (!rid) throw new Error("Missing requestId");
 
       setPendingRequestId(rid);
       setMsg("Creating…");
-
       setRefreshKey((x) => x + 1);
-      pollRefreshWhilePending();
+      pollRefreshWhilePending(rid);
     } catch (e) {
-      setMsg(e?.response?.data?.message || e.message || "Error");
+      setMsg(e?.response?.data?.message || e?.message || "Error");
     } finally {
       setBusy(false);
     }
@@ -195,7 +245,7 @@ export default function GenerateImageSection({ category }) {
 
           <div className={styles.field}>
             <div className={styles.label}>Format</div>
-            <select className={styles.select} value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)} disabled={!!pendingRequestId}>
+            <select className={`${styles.select} adminSelectFix`} value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)} disabled={!!pendingRequestId}>
               {RATIOS.map((r) => (
                 <option key={r.value} value={r.value}>
                   {r.label}
@@ -206,23 +256,31 @@ export default function GenerateImageSection({ category }) {
 
           {type === "guided" ? (
             <>
-              <select className={styles.select} value={templateCode} onChange={(e) => setTemplateCode(e.target.value)} disabled={!!pendingRequestId || !templates.length}>
-                {templates.map((t) => (
-                  <option key={t.code} value={t.code}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
+              <div className={styles.field}>
+                <div className={styles.label}>Template</div>
+                <select
+                  className={`${styles.select} adminSelectFix`}
+                  value={templateCode}
+                  onChange={(e) => setTemplateCode(e.target.value)}
+                  disabled={!!pendingRequestId || !templates.length}
+                >
+                  {templates.map((t) => (
+                    <option key={t.code} value={t.code}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
               {selectedTemplate?.fields?.map((f) => (
                 <div className={styles.field} key={f.key}>
                   <div className={styles.label}>{f.label}</div>
 
-                  {f.type === "select" && (
+                  {f.type === "select" ? (
                     <select
-                      className={styles.select}
-                      value={selections[f.key] || (f.allowNone ? "none" : "")}
-                      onChange={(e) => setSelections((p) => ({ ...p, [f.key]: e.target.value }))}
+                      className={`${styles.select} adminSelectFix`}
+                      value={selections[f.key] ?? (f.allowNone ? "none" : "")}
+                      onChange={(e) => setFieldValue(f.key, e.target.value)}
                       disabled={!!pendingRequestId}
                     >
                       {f.allowNone && <option value="none">None</option>}
@@ -234,11 +292,16 @@ export default function GenerateImageSection({ category }) {
                           </option>
                         ))}
                     </select>
+                  ) : (
+                    <input
+                      className={styles.input}
+                      value={selections[f.key] ?? ""}
+                      onChange={(e) => setFieldValue(f.key, e.target.value)}
+                      disabled={!!pendingRequestId}
+                    />
                   )}
 
-                  {f.type === "text" && (
-                    <input className={styles.input} value={selections[f.key] || ""} onChange={(e) => setSelections((p) => ({ ...p, [f.key]: e.target.value }))} disabled={!!pendingRequestId} />
-                  )}
+                  {f.uiHint ? <div className={styles.hint}>{f.uiHint}</div> : null}
                 </div>
               ))}
 
@@ -254,13 +317,13 @@ export default function GenerateImageSection({ category }) {
             </div>
           )}
 
-          {kind === "i2i" && (
+          {kind === "i2i" ? (
             <div className={styles.field}>
               <div className={styles.label}>Upload up to 3 images</div>
               <input className={styles.file} type="file" multiple accept="image/*" onChange={onPickFiles} disabled={!!pendingRequestId} />
               <div className={styles.meta}>{files.length}/3</div>
 
-              {previews.length > 0 && (
+              {previews.length > 0 ? (
                 <div className={styles.previewRow}>
                   {previews.map((src, idx) => (
                     <div key={src} className={styles.previewItem}>
@@ -271,18 +334,18 @@ export default function GenerateImageSection({ category }) {
                     </div>
                   ))}
                 </div>
-              )}
+              ) : null}
             </div>
-          )}
+          ) : null}
 
           <div className={styles.actions}>
             <button type="button" className={styles.primary} onClick={generate} disabled={generateDisabled}>
               <span className={styles.btnText}>{pendingRequestId ? "Creating…" : "Generate"}</span>
-              <span className={styles.btnMeta}>  {cost} credits</span>
+              <span className={styles.btnMeta}>{cost} credits</span>
             </button>
           </div>
 
-          {msg && <div className={styles.msg}>{msg}</div>}
+          {msg ? <div className={styles.msg}>{msg}</div> : null}
         </div>
       </aside>
 

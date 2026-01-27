@@ -8,30 +8,48 @@ function getTokenFromStorage() {
   return localStorage.getItem("accessToken") || "";
 }
 
+function getUserFromStorage() {
+  try {
+    const raw = localStorage.getItem("user");
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function AuthProvider({ children }) {
   const [accessToken, setAccessToken] = useState(getTokenFromStorage);
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(getUserFromStorage);
   const [authLoading, setAuthLoading] = useState(true);
 
   const tokenRef = useRef(accessToken);
+
   useEffect(() => {
     tokenRef.current = accessToken;
   }, [accessToken]);
 
   const saveToken = (token) => {
     const t = token ? String(token) : "";
+    tokenRef.current = t;
     setAccessToken(t);
     if (t) localStorage.setItem("accessToken", t);
     else localStorage.removeItem("accessToken");
   };
 
+  const saveUser = (u) => {
+    setUser(u);
+    if (u) localStorage.setItem("user", JSON.stringify(u));
+    else localStorage.removeItem("user");
+  };
+
   const loadMe = async () => {
     if (!tokenRef.current) {
-      setUser(null);
+      saveUser(null);
       return;
     }
     const res = await api.get("/auth/me");
-    setUser(res.data.user);
+    const u = res.data?.user ?? null;
+    saveUser(u);
   };
 
   useEffect(() => {
@@ -41,40 +59,45 @@ export function AuthProvider({ children }) {
       onLogout: () => {
         stopSSE();
         saveToken("");
-        setUser(null);
+        saveUser(null);
       },
     });
   }, []);
 
   useEffect(() => {
     const init = async () => {
-      try {
-        setAuthLoading(true);
+      setAuthLoading(true);
 
-        if (tokenRef.current) {
-          await loadMe();
-        } else {
-          setUser(null);
+      try {
+        if (!tokenRef.current) {
+          saveUser(null);
+          return;
         }
-      } catch {
-        try {
-          const r = await api.post("/auth/refresh");
-          const newToken = r.data?.accessToken || "";
-          if (newToken) {
-            saveToken(newToken);
-            await loadMe();
-          } else {
+        await loadMe();
+      } catch (err) {
+        const status = err?.response?.status;
+
+        if (status === 401) {
+          try {
+            const r = await api.post("/auth/refresh");
+            const newToken = r.data?.accessToken || "";
+            if (newToken) {
+              saveToken(newToken);
+              await loadMe();
+            } else {
+              saveToken("");
+              saveUser(null);
+            }
+          } catch {
             saveToken("");
-            setUser(null);
+            saveUser(null);
           }
-        } catch {
-          saveToken("");
-          setUser(null);
         }
       } finally {
         setAuthLoading(false);
       }
     };
+
     init();
   }, []);
 
@@ -90,7 +113,12 @@ export function AuthProvider({ children }) {
         if (name === "credits" || name === "credits.updated") {
           const credits = data?.credits;
           if (typeof credits === "number") {
-            setUser((prev) => (prev ? { ...prev, credits } : prev));
+            setUser((prev) => {
+              if (!prev) return prev;
+              const next = { ...prev, credits };
+              localStorage.setItem("user", JSON.stringify(next));
+              return next;
+            });
           }
         }
 
@@ -110,14 +138,14 @@ export function AuthProvider({ children }) {
   const login = async ({ email, password }) => {
     const res = await api.post("/auth/login", { email, password });
     saveToken(res.data.accessToken);
-    setUser(res.data.user);
+    saveUser(res.data.user ?? null);
     return res.data;
   };
 
   const signup = async ({ email, password, confirmPassword }) => {
     const res = await api.post("/auth/signup", { email, password, confirmPassword });
     saveToken(res.data.accessToken);
-    setUser(res.data.user);
+    saveUser(res.data.user ?? null);
     return res.data;
   };
 
@@ -127,7 +155,7 @@ export function AuthProvider({ children }) {
     } catch {}
     stopSSE();
     saveToken("");
-    setUser(null);
+    saveUser(null);
   };
 
   const value = useMemo(
@@ -140,7 +168,7 @@ export function AuthProvider({ children }) {
       signup,
       logout,
       loadMe,
-      setUser,
+      setUser: saveUser,
     }),
     [accessToken, user, authLoading]
   );

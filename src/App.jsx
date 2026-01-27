@@ -26,6 +26,9 @@ import AdminPlans from "./pages/admin/AdminPlans/AdminPlans";
 import AdminPacks from "./pages/admin/AdminPacks/AdminPacks";
 import AdminUsers from "./pages/admin/AdminUsers/AdminUsers";
 
+import AdminPrompts from "./pages/admin/AdminPrompts/AdminPrompts";
+import "./styles/adminControls.css";
+
 import GeneratePage from "./pages/Generate/GeneratePage";
 
 export default function App() {
@@ -104,6 +107,7 @@ export default function App() {
             <Route path="plans" element={<AdminPlans />} />
             <Route path="packs" element={<AdminPacks />} />
             <Route path="users" element={<AdminUsers />} />
+            <Route path="prompts" element={<AdminPrompts />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

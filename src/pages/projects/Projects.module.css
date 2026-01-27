@@ -29,6 +29,13 @@
   color: var(--text);
 }
 
+.subtitle{
+  margin: 10px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
 .link{
   color: var(--muted);
   text-decoration: none;
@@ -51,24 +58,71 @@
 .success{
   background: rgba(72, 187, 120, 0.12);
   border-color: rgba(72, 187, 120, 0.35);
-  color: var(--text);
 }
 
 .error{
   background: rgba(255, 107, 107, 0.12);
   border-color: rgba(255, 107, 107, 0.35);
-  color: var(--text);
 }
 
 .muted{
   color: var(--muted);
   font-weight: 600;
   font-size: 13px;
-  margin: 10px 0 0;
+  margin-top: 8px;
+}
+
+.form{
+  margin-top: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.input{
+  height: 44px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  outline: none;
+  color-scheme: light dark;
+}
+
+.input:focus{
+  border-color: rgba(120,140,255,.7);
+  box-shadow: 0 0 0 4px rgba(120,140,255,.18);
+}
+
+.input option{
+  background: var(--surface);
+  color: var(--text);
+}
+
+.button{
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid rgba(120,140,255,.6);
+  background: rgba(120,140,255,.18);
+  color: var(--text);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.button:disabled{
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+.grid{
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill,minmax(240px,1fr));
+  gap: 12px;
 }
 
 .item{
-  margin-top: 12px;
   padding: 14px;
   border-radius: 18px;
   border: 1px solid var(--border);
@@ -76,9 +130,9 @@
 }
 
 .rowButtons{
+  margin-top: 10px;
   display: flex;
   gap: 10px;
-  align-items: center;
   flex-wrap: wrap;
 }
 
@@ -91,16 +145,12 @@
   color: var(--text);
   font-weight: 800;
   cursor: pointer;
-  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+  transition: transform .15s ease, border-color .15s ease;
 }
 
 .smallBtn:hover{
   transform: translateY(-1px);
-  border-color: rgba(120, 140, 255, 0.6);
-}
-
-.smallBtn:active{
-  transform: translateY(0);
+  border-color: rgba(120,140,255,.6);
 }
 
 .ghost{
@@ -108,10 +158,20 @@
 }
 
 .danger{
-  border-color: rgba(255, 107, 107, 0.35);
-  background: rgba(255, 107, 107, 0.10);
+  border-color: rgba(255,107,107,.35);
+  background: rgba(255,107,107,.10);
 }
 
 .danger:hover{
-  border-color: rgba(255, 107, 107, 0.6);
+  border-color: rgba(255,107,107,.6);
+}
+
+/* Outputs section */
+.outputs{
+  margin-top: 14px;
+}
+
+.outputsTitle{
+  font-weight: 800;
+  margin-bottom: 10px;
 }
