@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import api from "../../api/api";
 
 import ProjectPicker from "../../components/ProjectPicker/ProjectPicker";
@@ -7,18 +7,26 @@ import styles from "./GenerateImageSection.module.css";
 import { uploadUpTo3Images } from "../../services/cloudinaryUpload";
 
 const RATIOS = [
-  { value: "1:1", label: "Retro Square (1:1)" },
-  { value: "3:2", label: "Retro Print (3:2)" },
-  { value: "2:3", label: "Film Portrait (2:3)" },
-  { value: "4:5", label: "IG Portrait (4:5)" },
-  { value: "9:16", label: "Story (9:16)" },
-  { value: "16:9", label: "Widescreen (16:9)" },
-  { value: "21:9", label: "Cinematic (21:9)" },
-  { value: "3:4", label: "Portrait (3:4)" },
+  { value: "1:1", label: "1:1" },
+  { value: "4:5", label: "4:5" },
+  { value: "9:16", label: "9:16" },
+  { value: "3:4", label: "3:4" },
+  { value: "16:9", label: "16:9" },
+  { value: "21:9", label: "21:9" },
+  { value: "3:2", label: "3:2" },
+  { value: "2:3", label: "2:3" },
 ];
+
+function mergeUpTo3(prev, incoming) {
+  const map = new Map();
+  for (const f of prev) map.set(`${f.name}:${f.size}:${f.lastModified}`, f);
+  for (const f of incoming) map.set(`${f.name}:${f.size}:${f.lastModified}`, f);
+  return Array.from(map.values()).slice(0, 3);
+}
 
 export default function GenerateImageSection({ category }) {
   const [projectId, setProjectId] = useState("");
+
   const [kind, setKind] = useState("t2i");
   const [type, setType] = useState("guided");
   const [quality, setQuality] = useState("normal");
@@ -34,11 +42,23 @@ export default function GenerateImageSection({ category }) {
 
   const [files, setFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
+
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+
+  const [pendingRequestId, setPendingRequestId] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
 
+  const stopRef = useRef(false);
+
   const cost = useMemo(() => (quality === "high" ? 4 : 2), [quality]);
+
+  useEffect(() => {
+    stopRef.current = false;
+    return () => {
+      stopRef.current = true;
+    };
+  }, []);
 
   async function loadTemplates() {
     try {
@@ -67,20 +87,12 @@ export default function GenerateImageSection({ category }) {
   useEffect(() => {
     const urls = (files || []).map((f) => URL.createObjectURL(f));
     setPreviews(urls);
-    return () => {
-      urls.forEach((u) => URL.revokeObjectURL(u));
-    };
+    return () => urls.forEach((u) => URL.revokeObjectURL(u));
   }, [files]);
-
-  function optionsForKey(key) {
-    if (!selectedTemplate) return [];
-    return (selectedTemplate.options || []).filter((o) => o.key === key);
-  }
 
   function onPickFiles(e) {
     const incoming = Array.from(e.target.files || []);
-    const next = incoming.slice(0, 3);
-    setFiles(next);
+    setFiles((prev) => mergeUpTo3(prev, incoming));
     e.target.value = "";
   }
 
@@ -88,8 +100,17 @@ export default function GenerateImageSection({ category }) {
     setFiles((prev) => prev.filter((_, i) => i !== idx));
   }
 
+  async function pollRefreshWhilePending() {
+    for (let i = 0; i < 80; i++) {
+      if (stopRef.current) return;
+      if (!pendingRequestId) return;
+      await new Promise((r) => setTimeout(r, 1500));
+      setRefreshKey((x) => x + 1);
+    }
+  }
+
   async function generate() {
-    if (!projectId || busy) return;
+    if (!projectId || busy || pendingRequestId) return;
 
     setBusy(true);
     setMsg("");
@@ -116,14 +137,23 @@ export default function GenerateImageSection({ category }) {
       }
 
       const res = await api.post(`/projects/${projectId}/generate`, payload);
-      setMsg(`Requested: ${res.data.requestId}`);
+
+      const rid = res?.data?.requestId || "";
+      if (!rid) throw new Error("Missing requestId");
+
+      setPendingRequestId(rid);
+      setMsg("Creating…");
+
       setRefreshKey((x) => x + 1);
+      pollRefreshWhilePending();
     } catch (e) {
       setMsg(e?.response?.data?.message || e.message || "Error");
     } finally {
       setBusy(false);
     }
   }
+
+  const generateDisabled = !projectId || busy || !!pendingRequestId;
 
   return (
     <div className={styles.grid}>
@@ -137,65 +167,35 @@ export default function GenerateImageSection({ category }) {
           <div className={styles.cardTitle}>Generate</div>
 
           <div className={styles.row}>
-            <button
-              type="button"
-              className={kind === "t2i" ? styles.pillActive : styles.pill}
-              onClick={() => setKind("t2i")}
-            >
+            <button type="button" className={kind === "t2i" ? styles.pillActive : styles.pill} onClick={() => setKind("t2i")} disabled={!!pendingRequestId}>
               Text → Image
             </button>
-            <button
-              type="button"
-              className={kind === "i2i" ? styles.pillActive : styles.pill}
-              onClick={() => setKind("i2i")}
-            >
+            <button type="button" className={kind === "i2i" ? styles.pillActive : styles.pill} onClick={() => setKind("i2i")} disabled={!!pendingRequestId}>
               Image → Image
             </button>
           </div>
 
           <div className={styles.row}>
-            <button
-              type="button"
-              className={type === "guided" ? styles.pillActive : styles.pill}
-              onClick={() => setType("guided")}
-            >
+            <button type="button" className={type === "guided" ? styles.pillActive : styles.pill} onClick={() => setType("guided")} disabled={!!pendingRequestId}>
               Guided
             </button>
-            <button
-              type="button"
-              className={type === "pro" ? styles.pillActive : styles.pill}
-              onClick={() => setType("pro")}
-            >
+            <button type="button" className={type === "pro" ? styles.pillActive : styles.pill} onClick={() => setType("pro")} disabled={!!pendingRequestId}>
               Pro Prompt
             </button>
           </div>
 
           <div className={styles.row}>
-            <button
-              type="button"
-              className={quality === "normal" ? styles.pillActive : styles.pill}
-              onClick={() => setQuality("normal")}
-            >
+            <button type="button" className={quality === "normal" ? styles.pillActive : styles.pill} onClick={() => setQuality("normal")} disabled={!!pendingRequestId}>
               Normal
             </button>
-            <button
-              type="button"
-              className={quality === "high" ? styles.pillActive : styles.pill}
-              onClick={() => setQuality("high")}
-            >
+            <button type="button" className={quality === "high" ? styles.pillActive : styles.pill} onClick={() => setQuality("high")} disabled={!!pendingRequestId}>
               High
             </button>
           </div>
 
-          <div className={styles.meta}>Cost: {cost} credits</div>
-
           <div className={styles.field}>
-            <div className={styles.label}>Retro size</div>
-            <select
-              className={styles.select}
-              value={aspectRatio}
-              onChange={(e) => setAspectRatio(e.target.value)}
-            >
+            <div className={styles.label}>Format</div>
+            <select className={styles.select} value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)} disabled={!!pendingRequestId}>
               {RATIOS.map((r) => (
                 <option key={r.value} value={r.value}>
                   {r.label}
@@ -206,12 +206,7 @@ export default function GenerateImageSection({ category }) {
 
           {type === "guided" ? (
             <>
-              <select
-                className={styles.select}
-                value={templateCode}
-                onChange={(e) => setTemplateCode(e.target.value)}
-                disabled={!templates.length}
-              >
+              <select className={styles.select} value={templateCode} onChange={(e) => setTemplateCode(e.target.value)} disabled={!!pendingRequestId || !templates.length}>
                 {templates.map((t) => (
                   <option key={t.code} value={t.code}>
                     {t.name}
@@ -227,114 +222,50 @@ export default function GenerateImageSection({ category }) {
                     <select
                       className={styles.select}
                       value={selections[f.key] || (f.allowNone ? "none" : "")}
-                      onChange={(e) =>
-                        setSelections((p) => ({ ...p, [f.key]: e.target.value }))
-                      }
+                      onChange={(e) => setSelections((p) => ({ ...p, [f.key]: e.target.value }))}
+                      disabled={!!pendingRequestId}
                     >
                       {f.allowNone && <option value="none">None</option>}
-                      {optionsForKey(f.key).map((o) => (
-                        <option key={`${o.key}:${o.value}`} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
+                      {(selectedTemplate.options || [])
+                        .filter((o) => o.key === f.key)
+                        .map((o) => (
+                          <option key={`${o.key}:${o.value}`} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
                     </select>
                   )}
 
                   {f.type === "text" && (
-                    <input
-                      className={styles.input}
-                      value={selections[f.key] || ""}
-                      onChange={(e) =>
-                        setSelections((p) => ({ ...p, [f.key]: e.target.value }))
-                      }
-                    />
-                  )}
-
-                  {f.type === "number" && (
-                    <input
-                      className={styles.input}
-                      type="number"
-                      value={selections[f.key] || ""}
-                      onChange={(e) =>
-                        setSelections((p) => ({ ...p, [f.key]: e.target.value }))
-                      }
-                    />
+                    <input className={styles.input} value={selections[f.key] || ""} onChange={(e) => setSelections((p) => ({ ...p, [f.key]: e.target.value }))} disabled={!!pendingRequestId} />
                   )}
                 </div>
               ))}
 
               <div className={styles.field}>
                 <div className={styles.label}>Extra prompt</div>
-                <textarea
-                  className={styles.textarea}
-                  value={extraPrompt}
-                  onChange={(e) => setExtraPrompt(e.target.value)}
-                />
+                <textarea className={styles.textarea} value={extraPrompt} onChange={(e) => setExtraPrompt(e.target.value)} disabled={!!pendingRequestId} />
               </div>
             </>
           ) : (
             <div className={styles.field}>
               <div className={styles.label}>Prompt</div>
-              <textarea
-                className={styles.textarea}
-                value={proPrompt}
-                onChange={(e) => setProPrompt(e.target.value)}
-              />
+              <textarea className={styles.textarea} value={proPrompt} onChange={(e) => setProPrompt(e.target.value)} disabled={!!pendingRequestId} />
             </div>
           )}
 
           {kind === "i2i" && (
             <div className={styles.field}>
               <div className={styles.label}>Upload up to 3 images</div>
-              <input
-                className={styles.file}
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={onPickFiles}
-              />
-
-              <div className={styles.meta}>{files.length}/3 selected</div>
+              <input className={styles.file} type="file" multiple accept="image/*" onChange={onPickFiles} disabled={!!pendingRequestId} />
+              <div className={styles.meta}>{files.length}/3</div>
 
               {previews.length > 0 && (
-                <div style={{ display: "flex", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
+                <div className={styles.previewRow}>
                   {previews.map((src, idx) => (
-                    <div
-                      key={src}
-                      style={{
-                        position: "relative",
-                        width: 64,
-                        height: 64,
-                        borderRadius: 10,
-                        overflow: "hidden",
-                        border: "1px solid rgba(255,255,255,0.12)",
-                      }}
-                    >
-                      <img
-                        src={src}
-                        alt=""
-                        style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.95 }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeFile(idx)}
-                        style={{
-                          position: "absolute",
-                          top: 4,
-                          right: 4,
-                          width: 18,
-                          height: 18,
-                          borderRadius: 999,
-                          border: "none",
-                          cursor: "pointer",
-                          background: "rgba(0,0,0,0.55)",
-                          color: "white",
-                          lineHeight: "18px",
-                          fontSize: 12,
-                        }}
-                        aria-label="Remove"
-                        title="Remove"
-                      >
+                    <div key={src} className={styles.previewItem}>
+                      <img src={src} alt="" className={styles.previewImg} />
+                      <button type="button" onClick={() => removeFile(idx)} className={styles.previewRemove} disabled={!!pendingRequestId}>
                         ×
                       </button>
                     </div>
@@ -344,9 +275,12 @@ export default function GenerateImageSection({ category }) {
             </div>
           )}
 
-          <button type="button" className={styles.primary} onClick={generate} disabled={!projectId || busy}>
-            {busy ? "Generating…" : "Generate"}
-          </button>
+          <div className={styles.actions}>
+            <button type="button" className={styles.primary} onClick={generate} disabled={generateDisabled}>
+              <span className={styles.btnText}>{pendingRequestId ? "Creating…" : "Generate"}</span>
+              <span className={styles.btnMeta}>  {cost} credits</span>
+            </button>
+          </div>
 
           {msg && <div className={styles.msg}>{msg}</div>}
         </div>
@@ -355,7 +289,17 @@ export default function GenerateImageSection({ category }) {
       <section className={styles.main}>
         <div className={styles.mainCard}>
           <div className={styles.mainTitle}>Outputs</div>
-          <OutputsGallery projectId={projectId} refreshKey={refreshKey} />
+
+          <OutputsGallery
+            projectId={projectId}
+            refreshKey={refreshKey}
+            pendingRequestId={pendingRequestId}
+            onPendingResolved={() => {
+              setPendingRequestId("");
+              setMsg("Done");
+              setRefreshKey((x) => x + 1);
+            }}
+          />
         </div>
       </section>
     </div>
