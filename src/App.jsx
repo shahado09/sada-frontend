@@ -29,7 +29,7 @@ import AdminUsers from "./pages/admin/AdminUsers/AdminUsers";
 import AdminPrompts from "./pages/admin/AdminPrompts/AdminPrompts";
 import "./styles/adminControls.css";
 
-import GeneratePage from "./pages/Generate/GeneratePage";
+import GeneratePage from "./pages/Generate/GeneratePage/GeneratePage";
 
 export default function App() {
   return (

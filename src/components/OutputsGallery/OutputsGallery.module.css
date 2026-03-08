@@ -316,3 +316,45 @@
   background: rgba(255, 255, 255, 0.02);
   border-color: rgba(244, 238, 230, 0.12);
 }
+
+.media {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(15, 23, 42, 0.03);
+}
+
+.img,
+.video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.video {
+  background: rgba(15, 23, 42, 0.03);
+}
+
+.previewVideo {
+  width: 100%;
+  max-height: 74vh;
+  object-fit: contain;
+  border-radius: 14px;
+  border: 1px solid var(--border, rgba(15, 23, 42, 0.12));
+  background: rgba(15, 23, 42, 0.03);
+}
+
+[data-theme="dark"] .media {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+[data-theme="dark"] .video {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+[data-theme="dark"] .previewVideo {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(244, 238, 230, 0.12);
+}

@@ -173,7 +173,7 @@ export default function AdminPayments() {
         )}
 
         <div className={styles.noteRow}>
-          <label className={styles.label}>Admin note (optional)</label>
+          <label className={styles.label}>Admin note</label>
           <input className={styles.input} value={note} onChange={(e) => setNote(e.target.value)} />
         </div>
 
@@ -193,7 +193,7 @@ export default function AdminPayments() {
         title="Reject Payment"
         onClose={() => { setModal(""); setRejectReason(""); }}
       >
-        <label className={styles.label}>Reason (shown to user)</label>
+        <label className={styles.label}>Reason </label>
         <textarea
           className={styles.textarea}
           value={rejectReason}

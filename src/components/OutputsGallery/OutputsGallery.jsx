@@ -13,6 +13,52 @@ function pickUrl(x) {
   return x?.url || "";
 }
 
+function isVideo(x) {
+  const t = String(x?.type || "").toLowerCase();
+  const f = String(x?.format || "").toLowerCase();
+  const u = String(x?.url || "").toLowerCase();
+  if (t === "video") return true;
+  if (f === "mp4" || f === "webm" || f === "mov") return true;
+  if (u.includes(".mp4") || u.includes(".webm") || u.includes(".mov")) return true;
+  return false;
+}
+
+function extFromUrl(url) {
+  try {
+    const u = new URL(url);
+    const p = u.pathname || "";
+    const last = p.split("/").pop() || "";
+    const dot = last.lastIndexOf(".");
+    if (dot === -1) return "";
+    return last.slice(dot + 1).toLowerCase();
+  } catch {
+    const p = String(url || "");
+    const last = p.split("?")[0].split("#")[0];
+    const dot = last.lastIndexOf(".");
+    if (dot === -1) return "";
+    return last.slice(dot + 1).toLowerCase();
+  }
+}
+
+async function downloadFile(url, filenameBase = "output") {
+  const r = await fetch(url, { mode: "cors" });
+  const blob = await r.blob();
+  const ct = String(blob.type || "").toLowerCase();
+  let ext = "";
+  if (ct.includes("video/")) ext = ct.split("/")[1] || "mp4";
+  else if (ct.includes("image/")) ext = ct.split("/")[1] || "jpg";
+  else ext = extFromUrl(url) || "bin";
+
+  const a = document.createElement("a");
+  const obj = URL.createObjectURL(blob);
+  a.href = obj;
+  a.download = `${filenameBase}.${ext}`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(obj);
+}
+
 export default function OutputsGallery({ projectId, refreshKey, pendingRequestId, onPendingResolved }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -21,6 +67,7 @@ export default function OutputsGallery({ projectId, refreshKey, pendingRequestId
   const [open, setOpen] = useState(false);
   const [activeUrl, setActiveUrl] = useState("");
   const [activeId, setActiveId] = useState("");
+  const [activeIsVideo, setActiveIsVideo] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   async function load() {
@@ -75,25 +122,12 @@ export default function OutputsGallery({ projectId, refreshKey, pendingRequestId
     }
   }, [pendingRequestId, pendingOutput, onPendingResolved]);
 
-  async function downloadImage(url, filenameBase = "output") {
-    const r = await fetch(url);
-    const blob = await r.blob();
-    const ext = (blob.type && blob.type.split("/")[1]) || "jpg";
-    const a = document.createElement("a");
-    const obj = URL.createObjectURL(blob);
-    a.href = obj;
-    a.download = `${filenameBase}.${ext}`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(obj);
-  }
-
   function openModal(x) {
     const url = pickUrl(x);
     if (!url) return;
     setActiveUrl(url);
     setActiveId(x?._id || "");
+    setActiveIsVideo(isVideo(x));
     setOpen(true);
   }
 
@@ -102,6 +136,7 @@ export default function OutputsGallery({ projectId, refreshKey, pendingRequestId
     setOpen(false);
     setActiveUrl("");
     setActiveId("");
+    setActiveIsVideo(false);
   }
 
   async function deleteOutput() {
@@ -145,14 +180,18 @@ export default function OutputsGallery({ projectId, refreshKey, pendingRequestId
               <div className={styles.processingInner}>
                 <div className={styles.spinner} />
                 <div className={styles.processingTitle}>Creating…</div>
-                <div className={styles.processingSub}>Your image will appear here</div>
+                <div className={styles.processingSub}>Your output will appear here</div>
               </div>
             </div>
           )}
 
           {pendingOutput && (
             <button type="button" className={styles.cardBtn} onClick={() => openModal(pendingOutput)}>
-              <img className={styles.img} src={pickUrl(pendingOutput)} alt="" />
+              {isVideo(pendingOutput) ? (
+                <video className={styles.video} src={pickUrl(pendingOutput)} controls playsInline preload="metadata" />
+              ) : (
+                <img className={styles.img} src={pickUrl(pendingOutput)} alt="" loading="lazy" />
+              )}
             </button>
           )}
 
@@ -163,7 +202,11 @@ export default function OutputsGallery({ projectId, refreshKey, pendingRequestId
               if (!url) return null;
               return (
                 <button key={x._id || url} type="button" className={styles.cardBtn} onClick={() => openModal(x)}>
-                  <img className={styles.img} src={url} alt="" />
+                  {isVideo(x) ? (
+                    <video className={styles.video} src={url} controls playsInline preload="metadata" />
+                  ) : (
+                    <img className={styles.img} src={url} alt="" loading="lazy" />
+                  )}
                 </button>
               );
             })}
@@ -176,7 +219,12 @@ export default function OutputsGallery({ projectId, refreshKey, pendingRequestId
             <div className={styles.modalHead}>
               <div className={styles.modalTitle}>Preview</div>
               <div className={styles.modalActions}>
-                <button type="button" className={styles.modalBtn} onClick={() => downloadImage(activeUrl, activeId)} disabled={deleting}>
+                <button
+                  type="button"
+                  className={styles.modalBtn}
+                  onClick={() => downloadFile(activeUrl, activeId || "output")}
+                  disabled={deleting}
+                >
                   Download
                 </button>
                 <button type="button" className={styles.dangerBtn} onClick={deleteOutput} disabled={deleting}>
@@ -189,7 +237,11 @@ export default function OutputsGallery({ projectId, refreshKey, pendingRequestId
             </div>
 
             <div className={styles.modalBody}>
-              <img src={activeUrl} alt="" className={styles.preview} />
+              {activeIsVideo ? (
+                <video className={styles.previewVideo} src={activeUrl} controls playsInline autoPlay />
+              ) : (
+                <img src={activeUrl} alt="" className={styles.preview} />
+              )}
             </div>
           </div>
         </div>
@@ -197,4 +249,3 @@ export default function OutputsGallery({ projectId, refreshKey, pendingRequestId
     </div>
   );
 }
-

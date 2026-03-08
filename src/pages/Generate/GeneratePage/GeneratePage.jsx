@@ -1,5 +1,6 @@
 import styles from "./GeneratePage.module.css";
-import GenerateImageSection from "./GenerateImageSection";
+import GeneratePageTabs from "../GenerateTabs/GeneratePageTabs";
+
 
 export default function GeneratePage({ category, title, subtitle }) {
   return (
@@ -10,7 +11,7 @@ export default function GeneratePage({ category, title, subtitle }) {
       </div>
 
       <div className={styles.shell}>
-        <GenerateImageSection category={category} />
+        <GeneratePageTabs category={category} />
       </div>
     </div>
   );

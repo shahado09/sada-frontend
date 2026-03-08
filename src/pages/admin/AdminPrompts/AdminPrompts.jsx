@@ -11,6 +11,7 @@ import {
 
 const emptyForm = {
   section: "fashion",
+  mode: "image",
   kind: "t2i",
   code: "",
   name: "",
@@ -38,11 +39,16 @@ function numOr(v, fallback) {
   return Number.isFinite(n) ? n : fallback;
 }
 
+function allowedKinds(mode) {
+  return mode === "video" ? ["t2v", "i2v"] : ["t2i", "i2i"];
+}
+
 export default function AdminPrompts() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [filterSection, setFilterSection] = useState("all");
+  const [filterMode, setFilterMode] = useState("all");
   const [filterKind, setFilterKind] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
 
@@ -76,6 +82,7 @@ export default function AdminPrompts() {
   const filtered = useMemo(() => {
     return items.filter((x) => {
       if (filterSection !== "all" && x.section !== filterSection) return false;
+      if (filterMode !== "all" && (x.mode || "image") !== filterMode) return false;
       if (filterKind !== "all" && x.kind !== filterKind) return false;
       if (filterStatus !== "all") {
         const s = x.isActive ? "active" : "inactive";
@@ -83,7 +90,7 @@ export default function AdminPrompts() {
       }
       return true;
     });
-  }, [items, filterSection, filterKind, filterStatus]);
+  }, [items, filterSection, filterMode, filterKind, filterStatus]);
 
   function openCreate() {
     setEditing(null);
@@ -97,9 +104,14 @@ export default function AdminPrompts() {
   function openEdit(row) {
     setEditing(row);
     const f = Array.isArray(row.fields) ? row.fields : [];
+    const mode = row.mode || "image";
+    const kinds = allowedKinds(mode);
+    const kind = kinds.includes(row.kind) ? row.kind : kinds[0];
+
     setForm({
       section: row.section || "fashion",
-      kind: row.kind || "t2i",
+      mode,
+      kind,
       code: row.code || "",
       name: row.name || "",
       basePrompt: row.basePrompt || "",
@@ -111,6 +123,7 @@ export default function AdminPrompts() {
       },
       isActive: !!row.isActive,
     });
+
     setTab("basic");
     setActiveFieldKey(f[0]?.key || "");
     setErr("");
@@ -122,43 +135,68 @@ export default function AdminPrompts() {
     setOpen(false);
   }
 
-  function setBasic(k, v) {
-    setForm((p) => ({ ...p, [k]: v }));
+  function setBasic(key, value) {
+    if (key === "mode") {
+      setForm((p) => {
+        const nextMode = value;
+        const kinds = allowedKinds(nextMode);
+        const nextKind = kinds.includes(p.kind) ? p.kind : kinds[0];
+        return { ...p, mode: nextMode, kind: nextKind };
+      });
+      return;
+    }
+    setForm((p) => ({ ...p, [key]: value }));
   }
 
-  function setPricing(k, v) {
-    setForm((p) => ({ ...p, pricing: { ...p.pricing, [k]: v } }));
+  function updatePricing(key, value) {
+    setForm((p) => ({
+      ...p,
+      pricing: { ...(p.pricing || {}), [key]: value },
+    }));
   }
 
   function fieldsForUi() {
-    return Array.isArray(form.fields) ? form.fields : [];
+    const arr = Array.isArray(form.fields) ? form.fields : [];
+    return arr.map((f) => ({
+      ...f,
+      key: normKey(f.key),
+      label: String(f.label || "").trim(),
+      type: f.type || "select",
+      required: !!f.required,
+      allowNone: !!f.allowNone,
+      uiHint: String(f.uiHint || "").trim(),
+    }));
   }
 
   function optionsForKey(key) {
-    const all = Array.isArray(form.options) ? form.options : [];
-    return all.filter((o) => o.key === key);
-  }
-
-  function upsertField(index, patch) {
-    setForm((p) => {
-      const next = [...(p.fields || [])];
-      next[index] = { ...next[index], ...patch };
-      return { ...p, fields: next };
-    });
+    const opts = Array.isArray(form.options) ? form.options : [];
+    return opts
+      .filter((o) => o.key === key)
+      .map((o) => ({
+        ...o,
+        key: normKey(o.key),
+        value: normKey(o.value),
+        label: String(o.label || "").trim(),
+        promptSnippet: String(o.promptSnippet || ""),
+        isNone: !!o.isNone,
+      }));
   }
 
   function addField() {
-    const k = `field_${uid()}`;
-    const nextField = {
-      key: k,
-      label: "New Field",
-      type: "select",
-      required: false,
-      allowNone: true,
-      uiHint: "",
-    };
-    setForm((p) => ({ ...p, fields: [...(p.fields || []), nextField] }));
-    setActiveFieldKey(k);
+    const key = `field_${uid()}`;
+    const f = { key, label: "New Field", type: "select", required: false, allowNone: true, uiHint: "" };
+    setForm((p) => ({ ...p, fields: [...(p.fields || []), f] }));
+    setActiveFieldKey(key);
+  }
+
+  function updateField(key, patch) {
+    setForm((p) => {
+      const next = [...(p.fields || [])];
+      const idx = next.findIndex((f) => f.key === key);
+      if (idx === -1) return p;
+      next[idx] = { ...next[idx], ...patch };
+      return { ...p, fields: next };
+    });
   }
 
   function removeField(key) {
@@ -236,7 +274,7 @@ export default function AdminPrompts() {
 
     const payload = {
       section: form.section,
-      mode: "image",
+      mode: form.mode,
       kind: form.kind,
       code: normKey(form.code),
       name: form.name.trim(),
@@ -295,6 +333,16 @@ export default function AdminPrompts() {
   const selectedKey = selectedField?.key || "";
   const selectedOptions = selectedKey ? optionsForKey(selectedKey) : [];
 
+  const filterKindOptions = useMemo(() => {
+    if (filterMode === "video") return ["t2v", "i2v"];
+    if (filterMode === "image") return ["t2i", "i2i"];
+    return ["t2i", "i2i", "t2v", "i2v"];
+  }, [filterMode]);
+
+  useEffect(() => {
+    if (filterKind !== "all" && !filterKindOptions.includes(filterKind)) setFilterKind("all");
+  }, [filterMode]);
+
   return (
     <div className={styles.page}>
       <div className={styles.header}>
@@ -325,11 +373,23 @@ export default function AdminPrompts() {
         </div>
 
         <div className={styles.filterItem}>
+          <div className={styles.label}>Mode</div>
+          <select className={`${styles.select} adminSelectFix`} value={filterMode} onChange={(e) => setFilterMode(e.target.value)}>
+            <option value="all">All</option>
+            <option value="image">image</option>
+            <option value="video">video</option>
+          </select>
+        </div>
+
+        <div className={styles.filterItem}>
           <div className={styles.label}>Kind</div>
           <select className={`${styles.select} adminSelectFix`} value={filterKind} onChange={(e) => setFilterKind(e.target.value)}>
             <option value="all">All</option>
-            <option value="t2i">t2i</option>
-            <option value="i2i">i2i</option>
+            {filterKindOptions.map((k) => (
+              <option key={k} value={k}>
+                {k}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -354,6 +414,7 @@ export default function AdminPrompts() {
               <th>Name</th>
               <th>Code</th>
               <th>Section</th>
+              <th>Mode</th>
               <th>Kind</th>
               <th>Normal</th>
               <th>High</th>
@@ -370,14 +431,19 @@ export default function AdminPrompts() {
                   <div className={styles.mini}>{row.basePrompt ? "Base prompt set" : "No base prompt"}</div>
                 </td>
                 <td className={styles.mono}>{row.code}</td>
-                <td><span className={styles.badge}>{row.section}</span></td>
-                <td><span className={styles.badge}>{row.kind}</span></td>
+                <td>
+                  <span className={styles.badge}>{row.section}</span>
+                </td>
+                <td>
+                  <span className={styles.badge}>{row.mode || "image"}</span>
+                </td>
+                <td>
+                  <span className={styles.badge}>{row.kind}</span>
+                </td>
                 <td className={styles.mono}>{numOr(row?.pricing?.normalCredits, 2)}</td>
                 <td className={styles.mono}>{numOr(row?.pricing?.highCredits, 4)}</td>
                 <td>
-                  <span className={row.isActive ? styles.statusActive : styles.statusInactive}>
-                    {row.isActive ? "Active" : "Inactive"}
-                  </span>
+                  <span className={row.isActive ? styles.statusActive : styles.statusInactive}>{row.isActive ? "Active" : "Inactive"}</span>
                 </td>
                 <td className={styles.actions}>
                   <button className={styles.ghostBtn} onClick={() => openEdit(row)} disabled={saving} type="button">
@@ -397,7 +463,9 @@ export default function AdminPrompts() {
 
             {!loading && filtered.length === 0 ? (
               <tr>
-                <td colSpan={8} className={styles.empty}>No prompts found</td>
+                <td colSpan={9} className={styles.empty}>
+                  No prompts found
+                </td>
               </tr>
             ) : null}
           </tbody>
@@ -406,10 +474,18 @@ export default function AdminPrompts() {
 
       <AdminModal open={open} title={editing ? "Edit Prompt" : "Create Prompt"} onClose={closeModal}>
         <div className={styles.modalTabs}>
-          <button type="button" className={tab === "basic" ? styles.tabActive : styles.tab} onClick={() => setTab("basic")}>Basic</button>
-          <button type="button" className={tab === "fields" ? styles.tabActive : styles.tab} onClick={() => setTab("fields")}>Fields</button>
-          <button type="button" className={tab === "options" ? styles.tabActive : styles.tab} onClick={() => setTab("options")}>Options</button>
-          <button type="button" className={tab === "credits" ? styles.tabActive : styles.tab} onClick={() => setTab("credits")}>Credits</button>
+          <button type="button" className={tab === "basic" ? styles.tabActive : styles.tab} onClick={() => setTab("basic")}>
+            Basic
+          </button>
+          <button type="button" className={tab === "fields" ? styles.tabActive : styles.tab} onClick={() => setTab("fields")}>
+            Fields
+          </button>
+          <button type="button" className={tab === "options" ? styles.tabActive : styles.tab} onClick={() => setTab("options")}>
+            Options
+          </button>
+          <button type="button" className={tab === "credits" ? styles.tabActive : styles.tab} onClick={() => setTab("credits")}>
+            Credits
+          </button>
         </div>
 
         {err ? <div className={styles.errorInModal}>{err}</div> : null}
@@ -426,19 +502,36 @@ export default function AdminPrompts() {
             </div>
 
             <div className={styles.field}>
-              <div className={styles.label}>Kind</div>
-              <select className={`${styles.input} adminSelectFix`} value={form.kind} onChange={(e) => setBasic("kind", e.target.value)} disabled={saving}>
-                <option value="t2i">t2i</option>
-                <option value="i2i">i2i</option>
+              <div className={styles.label}>Mode</div>
+              <select className={`${styles.input} adminSelectFix`} value={form.mode} onChange={(e) => setBasic("mode", e.target.value)} disabled={saving}>
+                <option value="image">image</option>
+                <option value="video">video</option>
               </select>
             </div>
 
             <div className={styles.field}>
-              <div className={styles.label}>Code {editing ? "(read-only)" : ""}</div>
-              <input className={styles.input} value={form.code} onChange={(e) => setBasic("code", e.target.value)} disabled={saving || !!editing} />
+              <div className={styles.label}>Kind</div>
+              <select className={`${styles.input} adminSelectFix`} value={form.kind} onChange={(e) => setBasic("kind", e.target.value)} disabled={saving}>
+                {allowedKinds(form.mode).map((k) => (
+                  <option key={k} value={k}>
+                    {k}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className={styles.field}>
+              <div className={styles.label}>Code {editing ? <span className={styles.mini}>(locked)</span> : null}</div>
+              <input
+                className={styles.input}
+                value={form.code}
+                onChange={(e) => setBasic("code", e.target.value)}
+                disabled={saving || !!editing?._id}
+                placeholder="e.g. product_packshot_clean"
+              />
+            </div>
+
+            <div className={styles.fieldWide}>
               <div className={styles.label}>Name</div>
               <input className={styles.input} value={form.name} onChange={(e) => setBasic("name", e.target.value)} disabled={saving} />
             </div>
@@ -447,57 +540,45 @@ export default function AdminPrompts() {
               <div className={styles.label}>Base Prompt</div>
               <textarea className={styles.textarea} value={form.basePrompt} onChange={(e) => setBasic("basePrompt", e.target.value)} disabled={saving} />
             </div>
-
-            <div className={styles.checkRow}>
-              <label className={styles.checkbox}>
-                <input type="checkbox" checked={!!form.isActive} onChange={(e) => setBasic("isActive", e.target.checked)} disabled={saving} />
-                <span>Active</span>
-              </label>
-            </div>
           </div>
         ) : null}
 
         {tab === "fields" ? (
-          <div className={styles.builderStack}>
-            <div className={styles.builderLeft}>
-              <div className={styles.builderHead}>
-                <div className={styles.builderTitle}>Fields</div>
-                <button className={styles.primaryBtnSm} onClick={addField} disabled={saving} type="button">+ Add</button>
+          <div className={styles.split}>
+            <div className={styles.left}>
+              <div className={styles.rowBetween}>
+                <div className={styles.sectionTitle}>Fields</div>
+                <button className={styles.primaryBtnSm} onClick={addField} type="button" disabled={saving}>
+                  + Field
+                </button>
               </div>
 
-              <div className={styles.fieldList}>
+              <div className={styles.list}>
                 {activeFields.map((f) => (
                   <button
                     key={f.key}
                     type="button"
-                    className={f.key === activeFieldKey ? styles.fieldItemActive : styles.fieldItem}
+                    className={activeFieldKey === f.key ? styles.listItemActive : styles.listItem}
                     onClick={() => setActiveFieldKey(f.key)}
+                    disabled={saving}
                   >
-                    <div className={styles.fieldItemTop}>
-                      <div className={styles.fieldItemLabel}>{f.label || f.key}</div>
-                      <div className={styles.fieldItemKey}>{f.key}</div>
-                    </div>
-                    <div className={styles.fieldItemMeta}>
-                      <span className={styles.pill}>{f.type || "select"}</span>
-                      <span className={styles.pill}>{(optionsForKey(f.key).length || 0) + " options"}</span>
+                    <div className={styles.listTitle}>{f.label || f.key}</div>
+                    <div className={styles.listMeta}>
+                      <span className={styles.badge}>{f.type || "select"}</span>
+                      {f.required ? <span className={styles.badge}>required</span> : null}
                     </div>
                   </button>
                 ))}
-                {activeFields.length === 0 ? <div className={styles.mutedBox}>No fields yet</div> : null}
+                {activeFields.length === 0 ? <div className={styles.emptyBox}>No fields yet</div> : null}
               </div>
             </div>
 
-            <div className={styles.builderRight}>
-              {!selectedField ? (
-                <div className={styles.mutedBox}>Select a field</div>
-              ) : (
-                <div className={styles.editor}>
-                  <div className={styles.editorHead}>
-                    <div>
-                      <div className={styles.editorTitle}>Edit Field</div>
-                      <div className={styles.editorSub}>{selectedField.key}</div>
-                    </div>
-                    <button className={styles.dangerBtnSm} onClick={() => removeField(selectedField.key)} disabled={saving} type="button">
+            <div className={styles.right}>
+              {selectedField ? (
+                <div className={styles.panel}>
+                  <div className={styles.rowBetween}>
+                    <div className={styles.sectionTitle}>Edit Field</div>
+                    <button className={styles.dangerBtnSm} onClick={() => removeField(selectedKey)} type="button" disabled={saving}>
                       Remove
                     </button>
                   </div>
@@ -505,35 +586,7 @@ export default function AdminPrompts() {
                   <div className={styles.formGrid}>
                     <div className={styles.field}>
                       <div className={styles.label}>Key</div>
-                      <input
-                        className={styles.input}
-                        value={selectedField.key}
-                        onChange={(e) => {
-                          const newKey = normKey(e.target.value);
-                          const oldKey = selectedField.key;
-                          if (!newKey) return;
-                          setForm((p) => {
-                            const nf = (p.fields || []).map((x) => (x.key === oldKey ? { ...x, key: newKey } : x));
-                            const no = (p.options || []).map((o) => (o.key === oldKey ? { ...o, key: newKey } : o));
-                            return { ...p, fields: nf, options: no };
-                          });
-                          setActiveFieldKey(newKey);
-                        }}
-                        disabled={saving}
-                      />
-                    </div>
-
-                    <div className={styles.field}>
-                      <div className={styles.label}>Label</div>
-                      <input
-                        className={styles.input}
-                        value={selectedField.label}
-                        onChange={(e) => {
-                          const idx = activeFields.findIndex((x) => x.key === selectedField.key);
-                          upsertField(idx, { label: e.target.value });
-                        }}
-                        disabled={saving}
-                      />
+                      <input className={styles.input} value={selectedField.key} onChange={(e) => updateField(selectedKey, { key: e.target.value })} disabled={saving} />
                     </div>
 
                     <div className={styles.field}>
@@ -541,10 +594,7 @@ export default function AdminPrompts() {
                       <select
                         className={`${styles.input} adminSelectFix`}
                         value={selectedField.type || "select"}
-                        onChange={(e) => {
-                          const idx = activeFields.findIndex((x) => x.key === selectedField.key);
-                          upsertField(idx, { type: e.target.value });
-                        }}
+                        onChange={(e) => updateField(selectedKey, { type: e.target.value })}
                         disabled={saving}
                       >
                         <option value="select">select</option>
@@ -553,188 +603,121 @@ export default function AdminPrompts() {
                       </select>
                     </div>
 
-                    <div className={styles.field}>
+                    <div className={styles.fieldWide}>
+                      <div className={styles.label}>Label</div>
+                      <input className={styles.input} value={selectedField.label} onChange={(e) => updateField(selectedKey, { label: e.target.value })} disabled={saving} />
+                    </div>
+
+                    <div className={styles.fieldWide}>
                       <div className={styles.label}>UI Hint</div>
-                      <input
-                        className={styles.input}
-                        value={selectedField.uiHint || ""}
-                        onChange={(e) => {
-                          const idx = activeFields.findIndex((x) => x.key === selectedField.key);
-                          upsertField(idx, { uiHint: e.target.value });
-                        }}
-                        disabled={saving}
-                      />
+                      <input className={styles.input} value={selectedField.uiHint || ""} onChange={(e) => updateField(selectedKey, { uiHint: e.target.value })} disabled={saving} />
                     </div>
 
                     <div className={styles.checkRow}>
-                      <label className={styles.checkbox}>
-                        <input
-                          type="checkbox"
-                          checked={!!selectedField.required}
-                          onChange={(e) => {
-                            const idx = activeFields.findIndex((x) => x.key === selectedField.key);
-                            upsertField(idx, { required: e.target.checked });
-                          }}
-                          disabled={saving}
-                        />
+                      <label className={styles.check}>
+                        <input type="checkbox" checked={!!selectedField.required} onChange={(e) => updateField(selectedKey, { required: e.target.checked })} disabled={saving} />
                         <span>Required</span>
                       </label>
 
-                      <label className={styles.checkbox}>
-                        <input
-                          type="checkbox"
-                          checked={!!selectedField.allowNone}
-                          onChange={(e) => {
-                            const idx = activeFields.findIndex((x) => x.key === selectedField.key);
-                            upsertField(idx, { allowNone: e.target.checked });
-                          }}
-                          disabled={saving}
-                        />
+                      <label className={styles.check}>
+                        <input type="checkbox" checked={!!selectedField.allowNone} onChange={(e) => updateField(selectedKey, { allowNone: e.target.checked })} disabled={saving} />
                         <span>Allow None</span>
                       </label>
                     </div>
-                  </div>
 
-                  <div className={styles.tip}>
-                    Use <span className={styles.monoInline}>{"{"+selectedField.key+"}"}</span> in Base Prompt if you want replacement.
+                    <div className={styles.note}>
+                      Placeholders: {"{field_key}"} will be replaced automatically if used inside Base Prompt.
+                    </div>
                   </div>
                 </div>
+              ) : (
+                <div className={styles.emptyBox}>Select a field to edit</div>
               )}
             </div>
           </div>
         ) : null}
 
         {tab === "options" ? (
-          <div className={styles.builderStack}>
-            <div className={styles.builderLeft}>
-              <div className={styles.builderHead}>
-                <div className={styles.builderTitle}>Fields</div>
+          <div className={styles.split}>
+            <div className={styles.left}>
+              <div className={styles.rowBetween}>
+                <div className={styles.sectionTitle}>Fields</div>
               </div>
 
-              <div className={styles.fieldList}>
-                {activeFields.map((f) => (
-                  <button
-                    key={f.key}
-                    type="button"
-                    className={f.key === activeFieldKey ? styles.fieldItemActive : styles.fieldItem}
-                    onClick={() => setActiveFieldKey(f.key)}
-                  >
-                    <div className={styles.fieldItemTop}>
-                      <div className={styles.fieldItemLabel}>{f.label || f.key}</div>
-                      <div className={styles.fieldItemKey}>{f.key}</div>
-                    </div>
-                    <div className={styles.fieldItemMeta}>
-                      <span className={styles.pill}>{f.type || "select"}</span>
-                      <span className={styles.pill}>{(optionsForKey(f.key).length || 0) + " options"}</span>
-                    </div>
-                  </button>
-                ))}
-                {activeFields.length === 0 ? <div className={styles.mutedBox}>No fields yet</div> : null}
+              <div className={styles.list}>
+                {activeFields
+                  .filter((f) => (f.type || "select") === "select")
+                  .map((f) => (
+                    <button
+                      key={f.key}
+                      type="button"
+                      className={activeFieldKey === f.key ? styles.listItemActive : styles.listItem}
+                      onClick={() => setActiveFieldKey(f.key)}
+                      disabled={saving}
+                    >
+                      <div className={styles.listTitle}>{f.label || f.key}</div>
+                      <div className={styles.listMeta}>
+                        <span className={styles.badge}>{optionsForKey(f.key).length} options</span>
+                      </div>
+                    </button>
+                  ))}
+                {activeFields.filter((f) => (f.type || "select") === "select").length === 0 ? <div className={styles.emptyBox}>No select fields</div> : null}
               </div>
             </div>
 
-            <div className={styles.builderRight}>
-              {!selectedField ? (
-                <div className={styles.mutedBox}>Select a field</div>
-              ) : (selectedField.type || "select") !== "select" ? (
-                <div className={styles.mutedBox}>Options are only for type=select</div>
-              ) : (
-                <div className={styles.editor}>
-                  <div className={styles.editorHead}>
-                    <div>
-                      <div className={styles.editorTitle}>Options</div>
-                      <div className={styles.editorSub}>{selectedField.label || selectedField.key}</div>
-                    </div>
-
-                    <button className={styles.primaryBtnSm} onClick={() => addOption(selectedField.key)} disabled={saving} type="button">
-                      + Add Option
+            <div className={styles.right}>
+              {selectedKey ? (
+                <div className={styles.panel}>
+                  <div className={styles.rowBetween}>
+                    <div className={styles.sectionTitle}>Options</div>
+                    <button className={styles.primaryBtnSm} onClick={() => addOption(selectedKey)} type="button" disabled={saving}>
+                      + Option
                     </button>
                   </div>
 
-                  <div className={styles.optionsTableWrap}>
-                    <table className={styles.optionsTable}>
-                      <thead>
-                        <tr>
-                          <th>Label</th>
-                          <th>Value</th>
-                          <th>Snippet</th>
-                          <th>None</th>
-                          <th className={styles.actionsCol}>Actions</th>
-                        </tr>
-                      </thead>
+                  <div className={styles.optionsList}>
+                    {selectedOptions.map((o) => (
+                      <div key={`${o.key}:${o.value}`} className={styles.optionRow}>
+                        <div className={styles.optionGrid}>
+                          <div className={styles.field}>
+                            <div className={styles.label}>Value</div>
+                            <input className={styles.input} value={o.value} onChange={(e) => updateOption(selectedKey, o.value, { value: e.target.value })} disabled={saving} />
+                          </div>
 
-                      <tbody>
-                        {selectedOptions.map((o) => (
-                          <tr key={o.value}>
-                            <td>
-                              <input
-                                className={styles.inputSm}
-                                value={o.label || ""}
-                                onChange={(e) => updateOption(selectedField.key, o.value, { label: e.target.value })}
-                                disabled={saving}
-                              />
-                            </td>
+                          <div className={styles.field}>
+                            <div className={styles.label}>Label</div>
+                            <input className={styles.input} value={o.label} onChange={(e) => updateOption(selectedKey, o.value, { label: e.target.value })} disabled={saving} />
+                          </div>
 
-                            <td>
-                              <input
-                                className={styles.inputSm}
-                                value={o.value || ""}
-                                onChange={(e) => {
-                                  const newVal = normKey(e.target.value);
-                                  if (!newVal) return;
-                                  setForm((p) => {
-                                    const next = [...(p.options || [])];
-                                    const idx = next.findIndex((x) => x.key === selectedField.key && x.value === o.value);
-                                    if (idx === -1) return p;
-                                    next[idx] = { ...next[idx], value: newVal };
-                                    return { ...p, options: next };
-                                  });
-                                }}
-                                disabled={saving}
-                              />
-                            </td>
+                          <div className={styles.fieldWide}>
+                            <div className={styles.label}>Prompt Snippet</div>
+                            <textarea
+                              className={styles.textareaSm}
+                              value={o.promptSnippet || ""}
+                              onChange={(e) => updateOption(selectedKey, o.value, { promptSnippet: e.target.value })}
+                              disabled={saving}
+                            />
+                          </div>
 
-                            <td>
-                              <textarea
-                                className={styles.textareaSm}
-                                value={o.promptSnippet || ""}
-                                onChange={(e) => updateOption(selectedField.key, o.value, { promptSnippet: e.target.value })}
-                                disabled={saving}
-                                placeholder="Text added to prompt"
-                              />
-                            </td>
+                          <div className={styles.checkRow}>
+                            <label className={styles.check}>
+                              <input type="checkbox" checked={!!o.isNone} onChange={(e) => updateOption(selectedKey, o.value, { isNone: e.target.checked })} disabled={saving} />
+                              <span>None option</span>
+                            </label>
 
-                            <td className={styles.center}>
-                              <input
-                                type="checkbox"
-                                checked={!!o.isNone}
-                                onChange={(e) => updateOption(selectedField.key, o.value, { isNone: e.target.checked })}
-                                disabled={saving}
-                              />
-                            </td>
+                            <button className={styles.dangerBtnSm} onClick={() => removeOption(selectedKey, o.value)} type="button" disabled={saving}>
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
 
-                            <td className={styles.actions}>
-                              <button className={styles.dangerBtnSm} onClick={() => removeOption(selectedField.key, o.value)} disabled={saving} type="button">
-                                Remove
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-
-                        {selectedOptions.length === 0 ? (
-                          <tr>
-                            <td colSpan={5} className={styles.empty}>No options yet</td>
-                          </tr>
-                        ) : null}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div className={styles.tip}>
-                    If Base Prompt has placeholders, snippets replace <span className={styles.monoInline}>{"{"+selectedField.key+"}"}</span>.
-                    Otherwise snippets append under Base Prompt.
+                    {selectedOptions.length === 0 ? <div className={styles.emptyBox}>No options yet</div> : null}
                   </div>
                 </div>
+              ) : (
+                <div className={styles.emptyBox}>Select a field to manage options</div>
               )}
             </div>
           </div>
@@ -745,40 +728,32 @@ export default function AdminPrompts() {
             <div className={styles.field}>
               <div className={styles.label}>Normal Credits</div>
               <input
-                type="number"
                 className={styles.input}
                 value={form.pricing?.normalCredits ?? 2}
-                onChange={(e) => setPricing("normalCredits", e.target.value)}
+                onChange={(e) => updatePricing("normalCredits", e.target.value)}
                 disabled={saving}
-                min="0"
               />
             </div>
 
             <div className={styles.field}>
               <div className={styles.label}>High Credits</div>
-              <input
-                type="number"
-                className={styles.input}
-                value={form.pricing?.highCredits ?? 4}
-                onChange={(e) => setPricing("highCredits", e.target.value)}
-                disabled={saving}
-                min="0"
-              />
+              <input className={styles.input} value={form.pricing?.highCredits ?? 4} onChange={(e) => updatePricing("highCredits", e.target.value)} disabled={saving} />
             </div>
 
-            <div className={styles.fieldWide}>
-              <div className={styles.mutedBox}>
-                Credits saved in template.pricing: normalCredits/highCredits.
-              </div>
+            <div className={styles.checkRow}>
+              <label className={styles.check}>
+                <input type="checkbox" checked={!!form.isActive} onChange={(e) => setBasic("isActive", e.target.checked)} disabled={saving} />
+                <span>Active</span>
+              </label>
             </div>
           </div>
         ) : null}
 
         <div className={styles.modalActions}>
-          <button className={styles.secondaryBtn} onClick={closeModal} disabled={saving} type="button">
+          <button className={styles.secondaryBtn} onClick={closeModal} type="button" disabled={saving}>
             Cancel
           </button>
-          <button className={styles.primaryBtn} onClick={save} disabled={saving} type="button">
+          <button className={styles.primaryBtn} onClick={save} type="button" disabled={saving}>
             {saving ? "Saving..." : "Save"}
           </button>
         </div>

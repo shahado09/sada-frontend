@@ -1,19 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import api from "../../api/api";
-import ProjectPicker from "../../components/ProjectPicker/ProjectPicker";
-import OutputsGallery from "../../components/OutputsGallery/OutputsGallery";
-import styles from "./GenerateImageSection.module.css";
-import { uploadUpTo3Images } from "../../services/cloudinaryUpload";
+import api from "../../../api/api";
+import ProjectPicker from "../../../components/ProjectPicker/ProjectPicker";
+import OutputsGallery from "../../../components/OutputsGallery/OutputsGallery";
+import styles from "./GenerateVideoSection.module.css";
+import { uploadUpTo3Images } from "../../../services/cloudinaryUpload";
 
 const RATIOS = [
+  { value: "16:9", label: "16:9" },
+  { value: "9:16", label: "9:16" },
   { value: "1:1", label: "1:1" },
   { value: "4:5", label: "4:5" },
-  { value: "9:16", label: "9:16" },
   { value: "3:4", label: "3:4" },
-  { value: "16:9", label: "16:9" },
   { value: "21:9", label: "21:9" },
   { value: "3:2", label: "3:2" },
   { value: "2:3", label: "2:3" },
+];
+
+const MODELS = [
+  { value: "kling-v2-6", label: "Fashion · Creator" },
+  { value: "veo3-1-fast", label: "Product · Standard" },
+  { value: "veo3-1", label: "Product · High Quality" },
 ];
 
 function mergeUpTo3(prev, incoming) {
@@ -35,30 +41,29 @@ function buildDefaultSelections(template) {
       else sel[f.key] = list[0]?.value || "";
       continue;
     }
-
-    if (f.type === "text") {
-      sel[f.key] = "";
-      continue;
-    }
-
-    if (f.type === "number") {
-      sel[f.key] = "";
-      continue;
-    }
-
     sel[f.key] = "";
   }
 
   return sel;
 }
 
-export default function GenerateImageSection({ category }) {
+function allowedDurations(model) {
+  if (model === "kling-v2-6") return [5, 10];
+  if (model === "veo3-1-fast") return [4, 6, 8];
+  return [];
+}
+
+export default function GenerateVideoSection({ category }) {
   const [projectId, setProjectId] = useState("");
 
-  const [kind, setKind] = useState("t2i");
+  const [kind, setKind] = useState("t2v");
   const [type, setType] = useState("guided");
   const [quality, setQuality] = useState("normal");
-  const [aspectRatio, setAspectRatio] = useState("1:1");
+  const [aspectRatio, setAspectRatio] = useState("16:9");
+
+  const [model, setModel] = useState("kling-v2-6");
+  const [generateAudio, setGenerateAudio] = useState(false);
+  const [duration, setDuration] = useState(allowedDurations("kling-v2-6")[0] || 0);
 
   const [templates, setTemplates] = useState([]);
   const [templateCode, setTemplateCode] = useState("");
@@ -78,6 +83,7 @@ export default function GenerateImageSection({ category }) {
   const [refreshKey, setRefreshKey] = useState(0);
 
   const stopRef = useRef(false);
+  const pollTimerRef = useRef(null);
 
   const cost = useMemo(() => {
     const normal = Number(selectedTemplate?.pricing?.normalCredits ?? 2);
@@ -89,12 +95,25 @@ export default function GenerateImageSection({ category }) {
     stopRef.current = false;
     return () => {
       stopRef.current = true;
+      if (pollTimerRef.current) {
+        clearInterval(pollTimerRef.current);
+        pollTimerRef.current = null;
+      }
     };
   }, []);
 
+  useEffect(() => {
+    const list = allowedDurations(model);
+    if (!list.length) {
+      setDuration(0);
+      return;
+    }
+    if (!list.includes(Number(duration))) setDuration(list[0]);
+  }, [model]);
+
   async function loadTemplates(section, k) {
     try {
-      const res = await api.get(`/prompt-templates?section=${section}&kind=${k}`);
+      const res = await api.get(`/prompt-templates?section=${section}&kind=${k}&mode=video`);
       setTemplates(res.data || []);
     } catch {
       setTemplates([]);
@@ -129,7 +148,7 @@ export default function GenerateImageSection({ category }) {
   }, [files]);
 
   useEffect(() => {
-    if (kind === "t2i") {
+    if (kind === "t2v") {
       setFiles([]);
       setPreviews([]);
     }
@@ -145,17 +164,54 @@ export default function GenerateImageSection({ category }) {
     setFiles((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  async function pollRefreshWhilePending(rid) {
-    for (let i = 0; i < 80; i++) {
-      if (stopRef.current) return;
-      if (!rid) return;
-      await new Promise((r) => setTimeout(r, 1500));
-      setRefreshKey((x) => x + 1);
+  function setFieldValue(key, value) {
+    setSelections((p) => ({ ...p, [key]: value }));
+  }
+
+  async function runSyncOnce(rid) {
+    const res = await api.post(`/requests/${rid}/sync-video`);
+    const req = res?.data?.request || null;
+    return req;
+  }
+
+  function stopPolling() {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
     }
   }
 
-  function setFieldValue(key, value) {
-    setSelections((p) => ({ ...p, [key]: value }));
+  function resolvePending(doneMessage) {
+    stopPolling();
+    setPendingRequestId("");
+    setMsg(doneMessage || "Done");
+    setRefreshKey((x) => x + 1);
+  }
+
+  function startPollingSyncVideo(rid) {
+    stopPolling();
+
+    pollTimerRef.current = setInterval(async () => {
+      try {
+        if (stopRef.current) return;
+        if (!rid) return;
+
+        const req = await runSyncOnce(rid);
+        setRefreshKey((x) => x + 1);
+
+        const st = req?.status || "";
+        if (st === "completed") {
+          resolvePending("Done");
+          return;
+        }
+        if (st === "failed") {
+          resolvePending(req?.error || "Failed");
+          return;
+        }
+
+        setMsg("Processing…");
+      } catch (e) {}
+    }, 7000);
   }
 
   async function generate() {
@@ -165,7 +221,19 @@ export default function GenerateImageSection({ category }) {
     setMsg("");
 
     try {
-      const payload = { section: category, kind, type, quality, aspectRatio };
+      const payload = {
+        section: category,
+        mode: "video",
+        kind,
+        type,
+        quality,
+        aspectRatio,
+        model,
+        generateAudio: !!generateAudio,
+      };
+
+      const dlist = allowedDurations(model);
+      if (dlist.length) payload.duration = Number(duration);
 
       if (type === "guided") {
         if (!templateCode) throw new Error("Please select a template");
@@ -178,9 +246,12 @@ export default function GenerateImageSection({ category }) {
         payload.promptText = p;
       }
 
-      if (kind === "i2i") {
+      if (kind === "i2v") {
         if (!files.length) throw new Error("Please upload at least 1 image");
-        const uploaded = await uploadUpTo3Images(files);
+        const max = model === "veo3-1" ? 3 : 1;
+        const picked = files.slice(0, max);
+        const uploaded = await uploadUpTo3Images(picked);
+
         payload.inputs = uploaded.map((x) => ({
           url: x.url,
           publicId: x.publicId,
@@ -188,14 +259,29 @@ export default function GenerateImageSection({ category }) {
         }));
       }
 
-      const res = await api.post(`/projects/${projectId}/generate`, payload);
+      const res = await api.post(`/projects/${projectId}/generate-video`, payload);
       const rid = res?.data?.requestId || "";
       if (!rid) throw new Error("Missing requestId");
 
       setPendingRequestId(rid);
       setMsg("Creating…");
       setRefreshKey((x) => x + 1);
-      pollRefreshWhilePending(rid);
+
+      try {
+        const first = await runSyncOnce(rid);
+        setRefreshKey((x) => x + 1);
+
+        if (first?.status === "completed") {
+          resolvePending("Done");
+          return;
+        }
+        if (first?.status === "failed") {
+          resolvePending(first?.error || "Failed");
+          return;
+        }
+      } catch {}
+
+      startPollingSyncVideo(rid);
     } catch (e) {
       setMsg(e?.response?.data?.message || e?.message || "Error");
     } finally {
@@ -214,14 +300,14 @@ export default function GenerateImageSection({ category }) {
         </div>
 
         <div className={styles.card}>
-          <div className={styles.cardTitle}>Generate</div>
+          <div className={styles.cardTitle}>Generate Video</div>
 
           <div className={styles.row}>
-            <button type="button" className={kind === "t2i" ? styles.pillActive : styles.pill} onClick={() => setKind("t2i")} disabled={!!pendingRequestId}>
-              Text → Image
+            <button type="button" className={kind === "t2v" ? styles.pillActive : styles.pill} onClick={() => setKind("t2v")} disabled={!!pendingRequestId}>
+              Text → Video
             </button>
-            <button type="button" className={kind === "i2i" ? styles.pillActive : styles.pill} onClick={() => setKind("i2i")} disabled={!!pendingRequestId}>
-              Image → Image
+            <button type="button" className={kind === "i2v" ? styles.pillActive : styles.pill} onClick={() => setKind("i2v")} disabled={!!pendingRequestId}>
+              Image → Video
             </button>
           </div>
 
@@ -244,7 +330,18 @@ export default function GenerateImageSection({ category }) {
           </div>
 
           <div className={styles.field}>
-            <div className={styles.label}>Format</div>
+            <div className={styles.label}>Model</div>
+            <select className={`${styles.select} adminSelectFix`} value={model} onChange={(e) => setModel(e.target.value)} disabled={!!pendingRequestId}>
+              {MODELS.map((m) => (
+                <option key={m.value} value={m.value}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className={styles.field}>
+            <div className={styles.label}>Aspect Ratio</div>
             <select className={`${styles.select} adminSelectFix`} value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)} disabled={!!pendingRequestId}>
               {RATIOS.map((r) => (
                 <option key={r.value} value={r.value}>
@@ -253,6 +350,26 @@ export default function GenerateImageSection({ category }) {
               ))}
             </select>
           </div>
+
+          {allowedDurations(model).length > 0 ? (
+            <div className={styles.field}>
+              <div className={styles.label}>Duration</div>
+              <select className={`${styles.select} adminSelectFix`} value={duration} onChange={(e) => setDuration(Number(e.target.value))} disabled={!!pendingRequestId}>
+                {allowedDurations(model).map((d) => (
+                  <option key={d} value={d}>
+                    {d}s
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div className={styles.note}>Duration is handled by the model</div>
+          )}
+
+          <label className={styles.check}>
+            <input type="checkbox" checked={!!generateAudio} onChange={(e) => setGenerateAudio(e.target.checked)} disabled={!!pendingRequestId} />
+            <span>Generate Audio</span>
+          </label>
 
           {type === "guided" ? (
             <>
@@ -293,12 +410,7 @@ export default function GenerateImageSection({ category }) {
                         ))}
                     </select>
                   ) : (
-                    <input
-                      className={styles.input}
-                      value={selections[f.key] ?? ""}
-                      onChange={(e) => setFieldValue(f.key, e.target.value)}
-                      disabled={!!pendingRequestId}
-                    />
+                    <input className={styles.input} value={selections[f.key] ?? ""} onChange={(e) => setFieldValue(f.key, e.target.value)} disabled={!!pendingRequestId} />
                   )}
 
                   {f.uiHint ? <div className={styles.hint}>{f.uiHint}</div> : null}
@@ -317,9 +429,9 @@ export default function GenerateImageSection({ category }) {
             </div>
           )}
 
-          {kind === "i2i" ? (
+          {kind === "i2v" ? (
             <div className={styles.field}>
-              <div className={styles.label}>Upload up to 3 images</div>
+              <div className={styles.label}>Upload images</div>
               <input className={styles.file} type="file" multiple accept="image/*" onChange={onPickFiles} disabled={!!pendingRequestId} />
               <div className={styles.meta}>{files.length}/3</div>
 
@@ -340,7 +452,7 @@ export default function GenerateImageSection({ category }) {
 
           <div className={styles.actions}>
             <button type="button" className={styles.primary} onClick={generate} disabled={generateDisabled}>
-              <span className={styles.btnText}>{pendingRequestId ? "Creating…" : "Generate"}</span>
+              <span className={styles.btnText}>{pendingRequestId ? "Processing…" : "Generate"}</span>
               <span className={styles.btnMeta}>{cost} credits</span>
             </button>
           </div>
@@ -358,9 +470,7 @@ export default function GenerateImageSection({ category }) {
             refreshKey={refreshKey}
             pendingRequestId={pendingRequestId}
             onPendingResolved={() => {
-              setPendingRequestId("");
-              setMsg("Done");
-              setRefreshKey((x) => x + 1);
+              resolvePending("Done");
             }}
           />
         </div>
