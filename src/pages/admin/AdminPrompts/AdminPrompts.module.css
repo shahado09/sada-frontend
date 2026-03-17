@@ -537,3 +537,23 @@
 [data-theme="light"] .statusInactive{
   color: rgba(0,0,0,0.78);
 }
+
+.bulkBox {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px dashed rgba(70, 140, 255, 0.30);
+  border-radius: 16px;
+  background: rgba(70, 140, 255, 0.05);
+  margin-bottom: 4px;
+}
+
+.check {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--text);
+  font-weight: 700;
+  cursor: pointer;
+}

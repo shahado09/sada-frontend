@@ -1,0 +1,173 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  color: var(--text);
+}
+
+.loading {
+  color: var(--muted);
+  padding: 24px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.h1 {
+  margin: 0;
+  font-size: 44px;
+  letter-spacing: 0.02em;
+  font-family: ui-serif, Georgia, serif;
+}
+
+.sub {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.saveBtn {
+  height: 44px;
+  padding: 0 20px;
+  border-radius: 14px;
+  border: 1px solid rgba(70, 140, 255, 0.35);
+  background: rgba(70, 140, 255, 0.20);
+  color: var(--text);
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.saveBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.error {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 90, 90, 0.30);
+  background: rgba(255, 90, 90, 0.08);
+  color: var(--text);
+}
+
+.success {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(80, 200, 120, 0.35);
+  background: rgba(80, 200, 120, 0.08);
+  color: var(--text);
+}
+
+.section {
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 20px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.00));
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sectionTitle {
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+
+.sectionSub {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: -10px;
+}
+
+.row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.priceCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.02);
+  min-width: 160px;
+}
+
+.priceLabel {
+  font-weight: 900;
+  font-size: 14px;
+}
+
+.priceDesc {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: -4px;
+}
+
+.priceInput {
+  width: 100%;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.03);
+  color: var(--text);
+  padding: 0 12px;
+  font-size: 20px;
+  font-weight: 900;
+  outline: none;
+  text-align: center;
+}
+
+.priceInput:focus {
+  border-color: rgba(70, 140, 255, 0.5);
+}
+
+.priceUnit {
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.modelBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.02);
+}
+
+.modelLabel {
+  font-weight: 900;
+  font-size: 15px;
+}
+
+.durationRow {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.durationCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  min-width: 100px;
+}
+
+.durationSec {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+}

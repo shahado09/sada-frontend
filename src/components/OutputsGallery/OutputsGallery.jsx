@@ -80,6 +80,17 @@ export default function OutputsGallery({ projectId, refreshKey, pendingRequestId
     return () => window.removeEventListener("output.created", handler);
   }, [projectId, onPendingResolved]);
 
+  useEffect(() => {
+    function handler(e) {
+      const pid = e?.detail?.projectId;
+      if (!pid || String(pid) !== String(projectId)) return;
+      load();
+      if (typeof onPendingResolved === "function") onPendingResolved();
+    }
+    window.addEventListener("generation_completed", handler);
+    return () => window.removeEventListener("generation_completed", handler);
+  }, [projectId, onPendingResolved]);
+
   const pendingOutput = useMemo(() => {
     if (!pendingRequestId) return null;
     return items.find((x) => String(x?.request) === String(pendingRequestId)) || null;

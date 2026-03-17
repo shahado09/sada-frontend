@@ -15,6 +15,7 @@ export default function AdminSidebar() {
         <NavLink className={nav} to="/admin/packs">Packs</NavLink>
         <NavLink className={nav} to="/admin/users">Users</NavLink>
         <NavLink className={nav} to="/admin/prompts">Prompts</NavLink>
+        <NavLink className={nav} to="/admin/pricing">Pricing</NavLink>
         <NavLink className={nav} to="/admin/ledger">Ledger</NavLink>
       </nav>
     </aside>

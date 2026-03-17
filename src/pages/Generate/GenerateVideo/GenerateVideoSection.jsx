@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import api from "../../../api/api";
 import ProjectPicker from "../../../components/ProjectPicker/ProjectPicker";
 import OutputsGallery from "../../../components/OutputsGallery/OutputsGallery";
@@ -22,11 +22,17 @@ const MODELS = [
   { value: "veo3-1",      label: "Product · High Quality" },
 ];
 
-function mergeUpTo3(prev, incoming) {
-  const map = new Map();
-  for (const f of prev) map.set(`${f.name}:${f.size}:${f.lastModified}`, f);
-  for (const f of incoming) map.set(`${f.name}:${f.size}:${f.lastModified}`, f);
-  return Array.from(map.values()).slice(0, 3);
+// All available durations per model
+function allowedDurations(model) {
+  if (model === "kling-v2-6")  return [5, 10, 15, 30, 60];
+  if (model === "veo3-1-fast") return [5, 10, 15, 30, 60];
+  if (model === "veo3-1")      return [5, 10, 15, 30, 60];
+  return [5, 10, 15, 30, 60];
+}
+
+function durationLabel(sec) {
+  if (sec === 60) return "1 min";
+  return `${sec}s`;
 }
 
 function buildDefaultSelections(template) {
@@ -44,21 +50,17 @@ function buildDefaultSelections(template) {
   return sel;
 }
 
-function allowedDurations(model) {
-  if (model === "kling-v2-6")  return [5, 10];
-  if (model === "veo3-1-fast") return [4, 6, 8];
-  return [];
-}
-
 export default function GenerateVideoSection({ category }) {
   const [projectId, setProjectId]         = useState("");
   const [kind, setKind]                   = useState("t2v");
   const [type, setType]                   = useState("guided");
-  const [quality, setQuality]             = useState("normal");
   const [aspectRatio, setAspectRatio]     = useState("16:9");
   const [model, setModel]                 = useState("kling-v2-6");
   const [generateAudio, setGenerateAudio] = useState(false);
-  const [duration, setDuration]           = useState(allowedDurations("kling-v2-6")[0] || 0);
+  const [duration, setDuration]           = useState(5);
+
+  const [videoPricing, setVideoPricing]   = useState({});
+  const [imagePricing, setImagePricing]   = useState({ normal: 2, high: 4 });
 
   const [templates, setTemplates]               = useState([]);
   const [templateCode, setTemplateCode]         = useState("");
@@ -79,16 +81,21 @@ export default function GenerateVideoSection({ category }) {
   const stopRef        = useRef(false);
   const pollTimerRef   = useRef(null);
 
-  const cost = useMemo(() => {
-    const normal = Number(selectedTemplate?.pricing?.normalCredits ?? 2);
-    const high   = Number(selectedTemplate?.pricing?.highCredits ?? 4);
-    return quality === "high" ? high : normal;
-  }, [quality, selectedTemplate]);
+  // Load pricing from backend
+  useEffect(() => {
+    api.get("/pricing/video").then((r) => setVideoPricing(r.data?.pricing || {})).catch(() => {});
+    api.get("/pricing/image").then((r) => setImagePricing(r.data?.pricing || { normal: 2, high: 4 })).catch(() => {});
+  }, []);
 
-  // ── mount: checkActive (مرة وحدة) ───────────────────────────────
+  // Calculate cost dynamically
+  const isKling = model === "kling-v2-6";
+  const priceTable = isKling ? videoPricing.kling : videoPricing.veo;
+  const baseCredits = priceTable?.[duration] ?? priceTable?.[String(duration)] ?? "—";
+  const cost = baseCredits === "—" ? "—" : (generateAudio ? baseCredits * 2 : baseCredits);
+
+  // mount: checkActive
   useEffect(() => {
     stopRef.current = false;
-
     if (didCheckActive.current) return;
     didCheckActive.current = true;
 
@@ -103,44 +110,26 @@ export default function GenerateVideoSection({ category }) {
           setRefreshKey((x) => x + 1);
           startPollingSyncVideo(active.requestId);
         }
-      } catch {
-
-      }
+      } catch {}
     }
 
     checkActive();
-
     return () => {
       stopRef.current = true;
-      if (pollTimerRef.current) {
-        clearInterval(pollTimerRef.current);
-        pollTimerRef.current = null;
-      }
+      if (pollTimerRef.current) { clearInterval(pollTimerRef.current); pollTimerRef.current = null; }
     };
   }, []);
 
-  // ── model → duration sync ────────────────────────────────────────
+  // templates
   useEffect(() => {
-    const list = allowedDurations(model);
-    if (!list.length) { setDuration(0); return; }
-    if (!list.includes(Number(duration))) setDuration(list[0]);
-  }, [model]);
-
-  // ── templates ────────────────────────────────────────────────────
-  async function loadTemplates(section, k) {
-    try {
-      const res = await api.get(`/prompt-templates?section=${section}&kind=${k}&mode=video`);
-      setTemplates(Array.isArray(res.data) ? res.data : []);
-    } catch { setTemplates([]); }
-  }
-
-  useEffect(() => { loadTemplates(category, kind); }, [category, kind]);
+    api.get(`/prompt-templates?section=${category}&kind=${kind}&mode=video`)
+      .then((r) => setTemplates(Array.isArray(r.data) ? r.data : []))
+      .catch(() => setTemplates([]));
+  }, [category, kind]);
 
   useEffect(() => {
     if (!templates.length) { setTemplateCode(""); return; }
-    if (!templateCode || !templates.some((t) => t.code === templateCode)) {
-      setTemplateCode(templates[0].code);
-    }
+    if (!templateCode || !templates.some((t) => t.code === templateCode)) setTemplateCode(templates[0].code);
   }, [templates]);
 
   useEffect(() => {
@@ -162,7 +151,17 @@ export default function GenerateVideoSection({ category }) {
 
   function onPickFiles(e) {
     const incoming = Array.from(e.target.files || []);
-    setFiles((prev) => mergeUpTo3(prev, incoming));
+    if (!incoming.length) return;
+    setFiles((prev) => {
+      const all = [...prev, ...incoming];
+      const seen = new Set();
+      return all.filter((f) => {
+        const key = `${f.name}:${f.size}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      }).slice(0, 3);
+    });
     e.target.value = "";
   }
   function removeFile(idx) { setFiles((prev) => prev.filter((_, i) => i !== idx)); }
@@ -188,8 +187,7 @@ export default function GenerateVideoSection({ category }) {
     stopPolling();
     pollTimerRef.current = setInterval(async () => {
       try {
-        if (stopRef.current) return;
-        if (!rid) return;
+        if (stopRef.current || !rid) return;
         const req = await runSyncOnce(rid);
         setRefreshKey((x) => x + 1);
         const st = req?.status || "";
@@ -207,10 +205,9 @@ export default function GenerateVideoSection({ category }) {
     try {
       const payload = {
         section: category, mode: "video", kind, type,
-        quality, aspectRatio, model, generateAudio: !!generateAudio,
+        aspectRatio, model, generateAudio: !!generateAudio,
+        duration: Number(duration),
       };
-      const dlist = allowedDurations(model);
-      if (dlist.length) payload.duration = Number(duration);
       if (type === "guided") {
         if (!templateCode) throw new Error("Please select a template");
         payload.templateCode = templateCode;
@@ -223,12 +220,9 @@ export default function GenerateVideoSection({ category }) {
       }
       if (kind === "i2v") {
         if (!files.length) throw new Error("Please upload at least 1 image");
-        const max     = model === "veo3-1" ? 3 : 1;
-        const picked  = files.slice(0, max);
-        const uploaded = await uploadUpTo3Images(picked);
-        payload.inputs = uploaded.map((x) => ({
-          url: x.url, publicId: x.publicId, resourceType: x.resourceType,
-        }));
+        const max = model === "veo3-1" ? 3 : 1;
+        const uploaded = await uploadUpTo3Images(files.slice(0, max));
+        payload.inputs = uploaded.map((x) => ({ url: x.url, publicId: x.publicId, resourceType: x.resourceType }));
       }
       const res = await api.post(`/projects/${projectId}/generate-video`, payload);
       const rid = res?.data?.requestId || "";
@@ -264,109 +258,54 @@ export default function GenerateVideoSection({ category }) {
           <div className={styles.cardTitle}>Generate Video</div>
 
           <div className={styles.row}>
-            <button type="button"
-              className={kind === "t2v" ? styles.pillActive : styles.pill}
-              onClick={() => setKind("t2v")} disabled={!!pendingRequestId}>
-              Text → Video
-            </button>
-            <button type="button"
-              className={kind === "i2v" ? styles.pillActive : styles.pill}
-              onClick={() => setKind("i2v")} disabled={!!pendingRequestId}>
-              Image → Video
-            </button>
+            <button type="button" className={kind === "t2v" ? styles.pillActive : styles.pill} onClick={() => setKind("t2v")} disabled={!!pendingRequestId}>Text → Video</button>
+            <button type="button" className={kind === "i2v" ? styles.pillActive : styles.pill} onClick={() => setKind("i2v")} disabled={!!pendingRequestId}>Image → Video</button>
           </div>
 
           <div className={styles.row}>
-            <button type="button"
-              className={type === "guided" ? styles.pillActive : styles.pill}
-              onClick={() => setType("guided")} disabled={!!pendingRequestId}>
-              Guided
-            </button>
-            <button type="button"
-              className={type === "pro" ? styles.pillActive : styles.pill}
-              onClick={() => setType("pro")} disabled={!!pendingRequestId}>
-              Pro Prompt
-            </button>
-          </div>
-
-          <div className={styles.row}>
-            <button type="button"
-              className={quality === "normal" ? styles.pillActive : styles.pill}
-              onClick={() => setQuality("normal")} disabled={!!pendingRequestId}>
-              Normal
-            </button>
-            <button type="button"
-              className={quality === "high" ? styles.pillActive : styles.pill}
-              onClick={() => setQuality("high")} disabled={!!pendingRequestId}>
-              High
-            </button>
+            <button type="button" className={type === "guided" ? styles.pillActive : styles.pill} onClick={() => setType("guided")} disabled={!!pendingRequestId}>Guided</button>
+            <button type="button" className={type === "pro" ? styles.pillActive : styles.pill} onClick={() => setType("pro")} disabled={!!pendingRequestId}>Pro Prompt</button>
           </div>
 
           <div className={styles.field}>
             <div className={styles.label}>Model</div>
-            <select
-              className={`${styles.select} adminSelectFix`}
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              disabled={!!pendingRequestId}>
-              {MODELS.map((m) => (
-                <option key={m.value} value={m.value}>{m.label}</option>
-              ))}
+            <select className={`${styles.select} adminSelectFix`} value={model} onChange={(e) => setModel(e.target.value)} disabled={!!pendingRequestId}>
+              {MODELS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
             </select>
           </div>
 
           <div className={styles.field}>
             <div className={styles.label}>Aspect Ratio</div>
-            <select
-              className={`${styles.select} adminSelectFix`}
-              value={aspectRatio}
-              onChange={(e) => setAspectRatio(e.target.value)}
-              disabled={!!pendingRequestId}>
-              {RATIOS.map((r) => (
-                <option key={r.value} value={r.value}>{r.label}</option>
-              ))}
+            <select className={`${styles.select} adminSelectFix`} value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)} disabled={!!pendingRequestId}>
+              {RATIOS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
             </select>
           </div>
 
-          {allowedDurations(model).length > 0 ? (
-            <div className={styles.field}>
-              <div className={styles.label}>Duration</div>
-              <select
-                className={`${styles.select} adminSelectFix`}
-                value={duration}
-                onChange={(e) => setDuration(Number(e.target.value))}
-                disabled={!!pendingRequestId}>
-                {allowedDurations(model).map((d) => (
-                  <option key={d} value={d}>{d}s</option>
-                ))}
-              </select>
+          <div className={styles.field}>
+            <div className={styles.label}>Duration</div>
+            <div className={styles.durationGrid}>
+              {allowedDurations(model).map((d) => (
+                <button key={d} type="button"
+                  className={duration === d ? styles.durationActive : styles.durationBtn}
+                  onClick={() => setDuration(d)}
+                  disabled={!!pendingRequestId}>
+                  {durationLabel(d)}
+                </button>
+              ))}
             </div>
-          ) : (
-            <div className={styles.note}>Duration is handled by the model</div>
-          )}
+          </div>
 
           <label className={styles.check}>
-            <input
-              type="checkbox"
-              checked={!!generateAudio}
-              onChange={(e) => setGenerateAudio(e.target.checked)}
-              disabled={!!pendingRequestId}
-            />
-            <span>Generate Audio</span>
+            <input type="checkbox" checked={!!generateAudio} onChange={(e) => setGenerateAudio(e.target.checked)} disabled={!!pendingRequestId} />
+            <span>Generate Audio {generateAudio ? <span className={styles.audioNote}>(×2 credits)</span> : null}</span>
           </label>
 
           {type === "guided" ? (
             <>
               <div className={styles.field}>
                 <div className={styles.label}>Template</div>
-                <select
-                  className={`${styles.select} adminSelectFix`}
-                  value={templateCode}
-                  onChange={(e) => setTemplateCode(e.target.value)}
-                  disabled={!!pendingRequestId || !templates.length}>
-                  {templates.map((t) => (
-                    <option key={t.code} value={t.code}>{t.name}</option>
-                  ))}
+                <select className={`${styles.select} adminSelectFix`} value={templateCode} onChange={(e) => setTemplateCode(e.target.value)} disabled={!!pendingRequestId || !templates.length}>
+                  {templates.map((t) => <option key={t.code} value={t.code}>{t.name}</option>)}
                 </select>
               </div>
 
@@ -374,25 +313,14 @@ export default function GenerateVideoSection({ category }) {
                 <div className={styles.field} key={f.key}>
                   <div className={styles.label}>{f.label}</div>
                   {f.type === "select" ? (
-                    <select
-                      className={`${styles.select} adminSelectFix`}
-                      value={selections[f.key] ?? ""}
-                      onChange={(e) => setFieldValue(f.key, e.target.value)}
-                      disabled={!!pendingRequestId}>
+                    <select className={`${styles.select} adminSelectFix`} value={selections[f.key] ?? ""} onChange={(e) => setFieldValue(f.key, e.target.value)} disabled={!!pendingRequestId}>
                       {f.allowNone && <option value="none">None</option>}
-                      {(selectedTemplate.options || [])
-                        .filter((o) => o.key === f.key)
-                        .map((o) => (
-                          <option key={`${o.key}:${o.value}`} value={o.value}>{o.label}</option>
-                        ))}
+                      {(selectedTemplate.options || []).filter((o) => o.key === f.key).map((o) => (
+                        <option key={`${o.key}:${o.value}`} value={o.value}>{o.label}</option>
+                      ))}
                     </select>
                   ) : (
-                    <input
-                      className={styles.input ?? styles.select}
-                      value={selections[f.key] ?? ""}
-                      onChange={(e) => setFieldValue(f.key, e.target.value)}
-                      disabled={!!pendingRequestId}
-                    />
+                    <input className={styles.select} value={selections[f.key] ?? ""} onChange={(e) => setFieldValue(f.key, e.target.value)} disabled={!!pendingRequestId} />
                   )}
                   {f.uiHint ? <div className={styles.hint}>{f.uiHint}</div> : null}
                 </div>
@@ -400,71 +328,49 @@ export default function GenerateVideoSection({ category }) {
 
               <div className={styles.field}>
                 <div className={styles.label}>Extra prompt</div>
-                <textarea
-                  className={styles.textarea}
-                  value={extraPrompt}
-                  onChange={(e) => setExtraPrompt(e.target.value)}
-                  disabled={!!pendingRequestId}
-                />
+                <textarea className={styles.textarea} value={extraPrompt} onChange={(e) => setExtraPrompt(e.target.value)} disabled={!!pendingRequestId} />
               </div>
             </>
           ) : (
             <div className={styles.field}>
               <div className={styles.label}>Prompt</div>
-              <textarea
-                className={styles.textarea}
-                value={proPrompt}
-                onChange={(e) => setProPrompt(e.target.value)}
-                disabled={!!pendingRequestId}
-              />
+              <textarea className={styles.textarea} value={proPrompt} onChange={(e) => setProPrompt(e.target.value)} disabled={!!pendingRequestId} />
             </div>
           )}
 
-          {kind === "i2v" ? (
+          {kind === "i2v" && (
             <div className={styles.field}>
               <div className={styles.label}>Upload images</div>
               <input
-                className={styles.file}
                 type="file"
                 multiple
                 accept="image/*"
+                className={styles.file}
                 onChange={onPickFiles}
                 disabled={!!pendingRequestId}
               />
-              <div className={styles.meta}>{files.length}/3</div>
+              <div className={styles.meta}>{files.length}/{model === "veo3-1" ? 3 : 1}</div>
               {previews.length > 0 && (
                 <div className={styles.previewRow}>
                   {previews.map((src, idx) => (
                     <div key={src} className={styles.previewItem}>
                       <img src={src} alt="" className={styles.previewImg} />
-                      <button
-                        type="button"
-                        onClick={() => removeFile(idx)}
-                        className={styles.previewRemove}
-                        disabled={!!pendingRequestId}>
-                        ×
-                      </button>
+                      <button type="button" onClick={() => removeFile(idx)} className={styles.previewRemove} disabled={!!pendingRequestId}>×</button>
                     </div>
                   ))}
                 </div>
               )}
             </div>
-          ) : null}
+          )}
 
           <div className={styles.actions}>
-            <button
-              type="button"
-              className={styles.primary}
-              onClick={generate}
-              disabled={generateDisabled}>
-              <span className={styles.btnText}>
-                {pendingRequestId ? "Processing…" : "Generate"}
-              </span>
+            <button type="button" className={styles.primary} onClick={generate} disabled={generateDisabled}>
+              <span className={styles.btnText}>{pendingRequestId ? "Processing…" : "Generate"}</span>
               <span className={styles.btnMeta}>{cost} credits</span>
             </button>
           </div>
 
-          {msg ? <div className={styles.msg}>{msg}</div> : null}
+          {msg && <div className={styles.msg}>{msg}</div>}
         </div>
       </aside>
 
@@ -482,4 +388,3 @@ export default function GenerateVideoSection({ category }) {
     </div>
   );
 }
-

@@ -127,6 +127,22 @@ export function AuthProvider({ children }) {
             window.dispatchEvent(new CustomEvent("output.created", { detail: { projectId, output } }));
           }
         }
+
+        if (name === "generation_completed") {
+          const projectId = data?.projectId;
+          const requestId = data?.requestId;
+          if (projectId) {
+            window.dispatchEvent(new CustomEvent("generation_completed", { detail: { projectId, requestId } }));
+          }
+        }
+
+        if (name === "generation_failed") {
+          const projectId = data?.projectId;
+          const requestId = data?.requestId;
+          if (projectId) {
+            window.dispatchEvent(new CustomEvent("generation_completed", { detail: { projectId, requestId, failed: true } }));
+          }
+        }
       },
     });
 

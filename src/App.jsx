@@ -28,6 +28,7 @@ import AdminPacks from "./pages/admin/AdminPacks/AdminPacks";
 import AdminUsers from "./pages/admin/AdminUsers/AdminUsers";
 import AdminPrompts from "./pages/admin/AdminPrompts/AdminPrompts";
 import AdminLedger from "./pages/admin/AdminLedger/AdminLedger"; 
+import AdminPricing from "./pages/admin/AdminPricing/AdminPricing";
 
 import "./styles/adminControls.css";
 import GeneratePage from "./pages/Generate/GeneratePage/GeneratePage";
@@ -82,6 +83,7 @@ export default function App() {
             <Route path="users" element={<AdminUsers />} />
             <Route path="prompts" element={<AdminPrompts />} />
             <Route path="ledger" element={<AdminLedger />} /> 
+            <Route path="pricing" element={<AdminPricing />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import api from "../../../api/api";
 import ProjectPicker from "../../../components/ProjectPicker/ProjectPicker";
 import OutputsGallery from "../../../components/OutputsGallery/OutputsGallery";
@@ -15,13 +15,6 @@ const RATIOS = [
   { value: "3:2",  label: "3:2" },
   { value: "2:3",  label: "2:3" },
 ];
-
-function mergeUpTo3(prev, incoming) {
-  const map = new Map();
-  for (const f of prev) map.set(`${f.name}:${f.size}:${f.lastModified}`, f);
-  for (const f of incoming) map.set(`${f.name}:${f.size}:${f.lastModified}`, f);
-  return Array.from(map.values()).slice(0, 3);
-}
 
 function buildDefaultSelections(template) {
   const sel     = {};
@@ -60,16 +53,20 @@ export default function GenerateImageSection({ category }) {
   const [pendingRequestId, setPendingRequestId] = useState("");
   const [refreshKey, setRefreshKey]             = useState(0);
 
-  const didInit  = useRef(false);
-  const stopRef  = useRef(false);
+  const [imagePricing, setImagePricing] = useState({ normal: 2, high: 4 });
 
-  const cost = useMemo(() => {
-    const normal = Number(selectedTemplate?.pricing?.normalCredits ?? 2);
-    const high   = Number(selectedTemplate?.pricing?.highCredits ?? 4);
-    return quality === "high" ? high : normal;
-  }, [quality, selectedTemplate]);
+  const didInit = useRef(false);
+  const stopRef = useRef(false);
 
-  // ── poll helper ──────────────────────────────────────────────────
+  useEffect(() => {
+    api.get("/pricing/image").then((r) => setImagePricing(r.data?.pricing || { normal: 2, high: 4 })).catch(() => {});
+  }, []);
+
+  const costKey = kind === "i2i"
+    ? (quality === "high" ? "i2i_high" : "i2i_normal")
+    : (quality === "high" ? "t2i_high" : "t2i_normal");
+  const cost = imagePricing[costKey] ?? (quality === "high" ? 4 : 2);
+
   const pollRefreshWhilePending = useCallback(async (rid) => {
     for (let i = 0; i < 80; i++) {
       if (stopRef.current || !rid) return;
@@ -78,19 +75,13 @@ export default function GenerateImageSection({ category }) {
     }
   }, []);
 
-  // ── mount once ──────────────────────────────────────────────────
   useEffect(() => {
     stopRef.current = false;
     if (didInit.current) return;
     didInit.current = true;
-
     api.get("/generation/active").then((res) => {
       const active = res?.data?.active;
-      if (
-        active?.requestId &&
-        active?.section === category &&
-        (active?.mode === "image" || !active?.mode)
-      ) {
+      if (active?.requestId && active?.section === category && (active?.mode === "image" || !active?.mode)) {
         if (active.projectId) setProjectId(String(active.projectId));
         setPendingRequestId(String(active.requestId));
         setMsg("Resuming…");
@@ -98,12 +89,9 @@ export default function GenerateImageSection({ category }) {
         pollRefreshWhilePending(active.requestId);
       }
     }).catch(() => {});
-
     return () => { stopRef.current = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── load templates ───────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
     api.get(`/prompt-templates?section=${category}&kind=${kind}`)
@@ -111,7 +99,6 @@ export default function GenerateImageSection({ category }) {
         if (cancelled) return;
         const list = Array.isArray(res.data) ? res.data : [];
         setTemplates(list);
-        // ✅ set default template code هنا مباشرة بدون useEffect ثاني
         if (list.length > 0) {
           setTemplateCode((prev) => {
             const valid = list.some((t) => t.code === prev);
@@ -133,7 +120,6 @@ export default function GenerateImageSection({ category }) {
     return () => { cancelled = true; };
   }, [category, kind]);
 
-  // ── sync selectedTemplate when templateCode or templates change ──
   useEffect(() => {
     const t = templates.find((x) => x.code === templateCode) ?? null;
     setSelectedTemplate(t);
@@ -141,7 +127,6 @@ export default function GenerateImageSection({ category }) {
     setExtraPrompt("");
   }, [templateCode, templates]);
 
-  // ── file previews ────────────────────────────────────────────────
   useEffect(() => {
     const urls = files.map((f) => URL.createObjectURL(f));
     setPreviews(urls);
@@ -152,11 +137,22 @@ export default function GenerateImageSection({ category }) {
     if (kind === "t2i") { setFiles([]); setPreviews([]); }
   }, [kind]);
 
-  // ── handlers ─────────────────────────────────────────────────────
   function onPickFiles(e) {
-    setFiles((prev) => mergeUpTo3(prev, Array.from(e.target.files || [])));
+    const incoming = Array.from(e.target.files || []);
+    if (!incoming.length) return;
+    setFiles((prev) => {
+      const all = [...prev, ...incoming];
+      const seen = new Set();
+      return all.filter((f) => {
+        const key = `${f.name}:${f.size}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      }).slice(0, 3);
+    });
     e.target.value = "";
   }
+
   function removeFile(idx) { setFiles((prev) => prev.filter((_, i) => i !== idx)); }
   function setFieldValue(key, value) { setSelections((p) => ({ ...p, [key]: value })); }
 
@@ -199,18 +195,15 @@ export default function GenerateImageSection({ category }) {
 
   const generateDisabled = !projectId || busy || !!pendingRequestId;
 
-  // ── render ───────────────────────────────────────────────────────
   return (
     <div className={styles.grid}>
       <aside className={styles.side}>
 
-        {/* Project */}
         <div className={styles.card}>
           <div className={styles.cardTitle}>Project</div>
           <ProjectPicker category={category} value={projectId} onChange={setProjectId} />
         </div>
 
-        {/* Generate Controls */}
         <div className={styles.card}>
           <div className={styles.cardTitle}>Generate</div>
 
@@ -243,7 +236,6 @@ export default function GenerateImageSection({ category }) {
             </select>
           </div>
 
-          {/* ✅ Guided mode — يشتغل حتى لو templates فاضية */}
           {type === "guided" ? (
             <>
               <div className={styles.field}>
@@ -297,12 +289,15 @@ export default function GenerateImageSection({ category }) {
           {kind === "i2i" && (
             <div className={styles.field}>
               <div className={styles.label}>Upload up to 3 images</div>
-              <label className={styles.uploadLabel}>
-                <input className={styles.fileHidden} type="file" multiple accept="image/*"
-                  onChange={onPickFiles} disabled={!!pendingRequestId} />
-                <span className={styles.uploadBtn}>Choose Files</span>
-                <span className={styles.uploadMeta}>{files.length === 0 ? "No files chosen" : `${files.length} file${files.length > 1 ? "s" : ""} chosen`}</span>
-              </label>
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                className={styles.file}
+                onChange={onPickFiles}
+                disabled={!!pendingRequestId}
+              />
+              <div className={styles.meta}>{files.length}/3</div>
               {previews.length > 0 && (
                 <div className={styles.previewRow}>
                   {previews.map((src, idx) => (
