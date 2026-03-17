@@ -228,15 +228,32 @@
 .modalBody {
   padding: 12px;
   background: rgba(15, 23, 42, 0.02);
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
-.preview {
-  width: 100%;
-  max-height: 74vh;
+.preview,
+.modalImg {
+  max-width: 100%;
+  max-height: 72vh;
+  width: auto;
+  height: auto;
   object-fit: contain;
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid var(--border, rgba(15, 23, 42, 0.12));
   background: rgba(15, 23, 42, 0.03);
+  display: block;
+}
+
+.modalVideo {
+  max-width: 100%;
+  max-height: 72vh;
+  width: auto;
+  height: auto;
+  border-radius: 12px;
+  display: block;
+  background: #000;
 }
 
 /* ===== Dark Mode ===== */

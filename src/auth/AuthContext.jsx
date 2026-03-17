@@ -67,7 +67,6 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const init = async () => {
       setAuthLoading(true);
-
       try {
         if (!tokenRef.current) {
           saveUser(null);
@@ -76,7 +75,6 @@ export function AuthProvider({ children }) {
         await loadMe();
       } catch (err) {
         const status = err?.response?.status;
-
         if (status === 401) {
           try {
             const r = await api.post("/auth/refresh");
@@ -97,9 +95,9 @@ export function AuthProvider({ children }) {
         setAuthLoading(false);
       }
     };
-
     init();
   }, []);
+
 
   useEffect(() => {
     if (!accessToken) {
@@ -139,6 +137,11 @@ export function AuthProvider({ children }) {
     const res = await api.post("/auth/login", { email, password });
     saveToken(res.data.accessToken);
     saveUser(res.data.user ?? null);
+
+    try {
+      await loadMe();
+    } catch {}
+
     return res.data;
   };
 

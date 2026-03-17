@@ -7,6 +7,7 @@ import MainLayout from "./layouts/MainLayout";
 
 import Login from "./pages/Login/Login";
 import Signup from "./pages/Signup/Signup";
+import ProfilePage from "./pages/Profile/ProfilePage";
 import Dashboard from "./pages/Dashboard/Dashboard";
 
 import ProjectsList from "./pages/projects/ProjectsList";
@@ -25,10 +26,10 @@ import AdminPayments from "./pages/admin/AdminPayments/AdminPayments";
 import AdminPlans from "./pages/admin/AdminPlans/AdminPlans";
 import AdminPacks from "./pages/admin/AdminPacks/AdminPacks";
 import AdminUsers from "./pages/admin/AdminUsers/AdminUsers";
-
 import AdminPrompts from "./pages/admin/AdminPrompts/AdminPrompts";
-import "./styles/adminControls.css";
+import AdminLedger from "./pages/admin/AdminLedger/AdminLedger"; 
 
+import "./styles/adminControls.css";
 import GeneratePage from "./pages/Generate/GeneratePage/GeneratePage";
 
 export default function App() {
@@ -48,6 +49,7 @@ export default function App() {
           >
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/profile" element={<ProfilePage />} />
 
             <Route path="/projects" element={<ProjectsList />} />
             <Route path="/projects/new" element={<CreateProject />} />
@@ -60,38 +62,9 @@ export default function App() {
             <Route path="/payment/:id" element={<PaymentFormPage />} />
             <Route path="/payment/request/:id" element={<PaymentStatusPage />} />
 
-            <Route
-              path="/generate/fashion"
-              element={
-                <GeneratePage
-                  category="fashion"
-                  title="Cloth AI"
-                  subtitle="Generate fashion visuals with templates or pro prompts."
-                />
-              }
-            />
-
-            <Route
-              path="/generate/product"
-              element={
-                <GeneratePage
-                  category="product"
-                  title="Product AI"
-                  subtitle="Create premium product shots & ads."
-                />
-              }
-            />
-
-            <Route
-              path="/generate/creator"
-              element={
-                <GeneratePage
-                  category="creator"
-                  title="Creator AI"
-                  subtitle="Content for creators: posters, edits, reels."
-                />
-              }
-            />
+            <Route path="/generate/fashion" element={<GeneratePage category="fashion" title="Cloth AI" subtitle="Generate fashion visuals with templates or pro prompts." />} />
+            <Route path="/generate/product" element={<GeneratePage category="product" title="Product AI" subtitle="Create premium product shots & ads." />} />
+            <Route path="/generate/creator" element={<GeneratePage category="creator" title="Creator AI" subtitle="Content for creators: posters, edits, reels." />} />
           </Route>
 
           <Route
@@ -108,6 +81,7 @@ export default function App() {
             <Route path="packs" element={<AdminPacks />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="prompts" element={<AdminPrompts />} />
+            <Route path="ledger" element={<AdminLedger />} /> 
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

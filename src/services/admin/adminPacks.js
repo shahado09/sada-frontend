@@ -19,3 +19,8 @@ export async function adminDeactivatePack(id) {
   const r = await api.delete(`/admin/packs/${id}`);
   return r.data.pack;
 }
+
+
+export async function adminHardDeletePack(id) {
+  await api.delete(`/admin/packs/${id}/hard`);
+}

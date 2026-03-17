@@ -9,16 +9,30 @@ export default function GeneratePageTabs({ category }) {
   return (
     <div className={styles.wrap}>
       <div className={styles.tabs}>
-        <button type="button" className={tab === "image" ? styles.tabActive : styles.tab} onClick={() => setTab("image")}>
+        <button
+          type="button"
+          className={tab === "image" ? styles.tabActive : styles.tab}
+          onClick={() => setTab("image")}
+        >
           Images
         </button>
-        <button type="button" className={tab === "video" ? styles.tabActive : styles.tab} onClick={() => setTab("video")}>
+        <button
+          type="button"
+          className={tab === "video" ? styles.tabActive : styles.tab}
+          onClick={() => setTab("video")}
+        >
           Videos
         </button>
       </div>
 
       <div className={styles.body}>
-        {tab === "image" ? <GenerateImageSection category={category} /> : <GenerateVideoSection category={category} />}
+        {/* ✅ كلا الكومبوننتين mounted دائماً — بس نخفي الغير نشط */}
+        <div style={{ display: tab === "image" ? "block" : "none" }}>
+          <GenerateImageSection category={category} />
+        </div>
+        <div style={{ display: tab === "video" ? "block" : "none" }}>
+          <GenerateVideoSection category={category} />
+        </div>
       </div>
     </div>
   );

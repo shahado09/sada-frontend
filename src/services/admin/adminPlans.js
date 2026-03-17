@@ -19,3 +19,8 @@ export async function adminDeactivatePlan(id) {
   const r = await api.delete(`/admin/plans/${id}`);
   return r.data.plan;
 }
+
+
+export async function adminHardDeletePlan(id) {
+  await api.delete(`/admin/plans/${id}/hard`);
+}

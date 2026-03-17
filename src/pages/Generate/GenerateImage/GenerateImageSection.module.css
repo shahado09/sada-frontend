@@ -116,6 +116,52 @@
   color: var(--muted, rgba(15, 23, 42, 0.7));
 }
 
+.uploadLabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+.fileHidden {
+  display: none;
+}
+
+.uploadBtn {
+  display: inline-block;
+  border-radius: 10px;
+  border: 1px solid var(--border, rgba(15, 23, 42, 0.18));
+  background: var(--surface, #ffffff);
+  color: var(--text, #0f172a);
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease;
+  white-space: nowrap;
+}
+
+.uploadLabel:hover .uploadBtn {
+  border-color: rgba(99, 102, 241, 0.5);
+  background: rgba(99, 102, 241, 0.06);
+}
+
+.uploadMeta {
+  font-size: 12px;
+  color: var(--muted, rgba(15, 23, 42, 0.65));
+}
+
+[data-theme="dark"] .uploadBtn {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(244, 238, 230, 0.14);
+  color: rgba(244, 238, 230, 0.9);
+}
+
+[data-theme="dark"] .uploadMeta {
+  color: rgba(244, 238, 230, 0.55);
+}
+
 .previewRow {
   margin-top: 12px;
   display: grid;

@@ -11,18 +11,11 @@ function monthStartISO() {
 
 function isApprovedStatus(s) {
   const v = String(s || "").toLowerCase();
-  // عدّلي إذا عندكم status مختلف
   return v === "approved" || v === "paid" || v === "completed" || v === "success";
 }
 
-function isPendingStatus(s) {
-  const v = String(s || "").toLowerCase();
-  return v === "pending_review" || v === "pending" || v === "review";
-}
-
 function getPaymentDateISO(p) {
-  // اختاري الموجود عندكم
-  return p?.paidAt || p?.approvedAt || p?.createdAt || p?.updatedAt || null;
+  return p?.reviewedAt || p?.paidAt || p?.approvedAt || p?.updatedAt || p?.createdAt || null;
 }
 
 function isThisMonth(p) {
@@ -34,58 +27,35 @@ function isThisMonth(p) {
 }
 
 function getKind(p) {
-  // مرن حسب بياناتكم
-  const k =
-    p?.kind ||
-    p?.type ||
-    p?.paymentType ||
-    p?.productType ||
-    p?.metadata?.kind ||
-    p?.meta?.kind;
-
+  const k = p?.kind || p?.type || p?.paymentType || p?.productType || "";
   const v = String(k || "").toLowerCase();
-
-  // fallback: وجود planId / packId
   if (v) return v;
   if (p?.planId || p?.plan || p?.subscriptionId) return "subscription";
   if (p?.packId || p?.pack) return "pack";
   return "other";
 }
 
+// ✅ FIX: الباك اند يحفظ amountBHD (كبير) مو amountBhd
 function getAmountBhd(p) {
-  // مرن حسب بياناتكم
-  const currency = String(p?.currency || p?.amount?.currency || p?.price?.currency || "BHD").toUpperCase();
-
   let amount =
+    p?.amountBHD ??   // ✅ الصح
+    p?.amountBhd ??   // fallback
     p?.amount ??
-    p?.amountBhd ??
     p?.price ??
     p?.total ??
-    p?.value ??
-    p?.amount?.amount ??
-    p?.price?.amount ??
     null;
 
-  // لو amount جاي سترنق
   if (typeof amount === "string") amount = Number(amount);
-
   if (Number.isNaN(amount) || amount == null) return 0;
-
-  // لو مو BHD، للحين نخليه 0 (MVP)
-  if (currency !== "BHD") return 0;
-
   return Number(amount);
 }
 
 export default function AdminDashboard() {
-  const [pending, setPending] = useState(0);
-
-  const [approvedSubs, setApprovedSubs] = useState(0);
+  const [pending, setPending]         = useState(0);
+  const [approvedSubs, setApprovedSubs]   = useState(0);
   const [approvedPacks, setApprovedPacks] = useState(0);
-
-  const [revenueMonth, setRevenueMonth] = useState(0);
-
-  const [loading, setLoading] = useState(true);
+  const [revenueMonth, setRevenueMonth]   = useState(0);
+  const [loading, setLoading]         = useState(true);
 
   useEffect(() => {
     let mounted = true;
@@ -94,63 +64,40 @@ export default function AdminDashboard() {
       try {
         setLoading(true);
 
-        // 1) Pending (مثل ما عندج)
         const pendingItems = await adminListPayments({ status: "pending_review" });
 
-        // 2) Approved list (نجيب approved عشان نحسب Subs + Packs + Revenue)
-        // إذا API عندكم ما يدعم status=approved، تقدرين تشيلين البراميتر وتفلترين هنا
+        // ✅ FIX: جيب كل الـ approved بدون حد زمني عشان يحسب الإجماليات
         const approvedItems = await adminListPayments({ status: "approved" }).catch(async () => {
-          // fallback: جيبي الكل وفلتر
           const all = await adminListPayments({});
           return all.filter((x) => isApprovedStatus(x.status));
         });
 
-        // فلترة الشهر الحالي
         const approvedThisMonth = approvedItems.filter((p) => isThisMonth(p));
 
-        // Subs approved (تبين "أي أحد subscription approved يطلع")
-        const subsApproved = approvedItems.filter(
-          (p) => isApprovedStatus(p.status) && getKind(p).includes("sub")
-        );
+        const subsApproved  = approvedItems.filter((p) => getKind(p).includes("sub"));
+        const packsApproved = approvedItems.filter((p) => getKind(p).includes("pack"));
 
-        // Packs approved
-        const packsApproved = approvedItems.filter(
-          (p) => isApprovedStatus(p.status) && getKind(p).includes("pack")
-        );
-
-        // Revenue Month (مجموع approved هذا الشهر)
-        const revenue = approvedThisMonth
-          .filter((p) => isApprovedStatus(p.status))
-          .reduce((sum, p) => sum + getAmountBhd(p), 0);
+        // ✅ FIX: حساب الـ revenue الصح
+        const revenue = approvedThisMonth.reduce((sum, p) => sum + getAmountBhd(p), 0);
 
         if (!mounted) return;
-
         setPending(pendingItems.length);
         setApprovedSubs(subsApproved.length);
         setApprovedPacks(packsApproved.length);
         setRevenueMonth(revenue);
-      } catch (e) {
+      } catch {
         if (!mounted) return;
-        setPending(0);
-        setApprovedSubs(0);
-        setApprovedPacks(0);
-        setRevenueMonth(0);
+        setPending(0); setApprovedSubs(0); setApprovedPacks(0); setRevenueMonth(0);
       } finally {
-        if (!mounted) return;
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     }
 
     load();
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, []);
 
-  const revenueText = useMemo(() => {
-    // عرض بسيط
-    return `${revenueMonth.toFixed(3)} BHD`;
-  }, [revenueMonth]);
+  const revenueText = useMemo(() => `${revenueMonth.toFixed(3)} BHD`, [revenueMonth]);
 
   return (
     <div className={styles.page}>

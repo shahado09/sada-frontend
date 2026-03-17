@@ -5,65 +5,35 @@ import styles from "./OutputsGallery.module.css";
 function asArray(payload) {
   if (Array.isArray(payload)) return payload;
   if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.data)) return payload.data;
   if (Array.isArray(payload?.outputs)) return payload.outputs;
   return [];
 }
 
 function pickUrl(x) {
-  return x?.url || "";
+  return x?.url || x?.resultUrl || "";
 }
 
 function isVideo(x) {
-  const t = String(x?.type || "").toLowerCase();
-  const f = String(x?.format || "").toLowerCase();
-  const u = String(x?.url || "").toLowerCase();
-  if (t === "video") return true;
-  if (f === "mp4" || f === "webm" || f === "mov") return true;
-  if (u.includes(".mp4") || u.includes(".webm") || u.includes(".mov")) return true;
-  return false;
+  return x?.type === "video" || /\.(mp4|webm|mov)$/i.test(pickUrl(x));
 }
 
-function extFromUrl(url) {
+async function downloadFile(url, name) {
   try {
-    const u = new URL(url);
-    const p = u.pathname || "";
-    const last = p.split("/").pop() || "";
-    const dot = last.lastIndexOf(".");
-    if (dot === -1) return "";
-    return last.slice(dot + 1).toLowerCase();
-  } catch {
-    const p = String(url || "");
-    const last = p.split("?")[0].split("#")[0];
-    const dot = last.lastIndexOf(".");
-    if (dot === -1) return "";
-    return last.slice(dot + 1).toLowerCase();
-  }
-}
-
-async function downloadFile(url, filenameBase = "output") {
-  const r = await fetch(url, { mode: "cors" });
-  const blob = await r.blob();
-  const ct = String(blob.type || "").toLowerCase();
-  let ext = "";
-  if (ct.includes("video/")) ext = ct.split("/")[1] || "mp4";
-  else if (ct.includes("image/")) ext = ct.split("/")[1] || "jpg";
-  else ext = extFromUrl(url) || "bin";
-
-  const a = document.createElement("a");
-  const obj = URL.createObjectURL(blob);
-  a.href = obj;
-  a.download = `${filenameBase}.${ext}`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(obj);
+    const r = await fetch(url);
+    const blob = await r.blob();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name || "output";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } catch {}
 }
 
 export default function OutputsGallery({ projectId, refreshKey, pendingRequestId, onPendingResolved }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
-
   const [open, setOpen] = useState(false);
   const [activeUrl, setActiveUrl] = useState("");
   const [activeId, setActiveId] = useState("");
@@ -76,8 +46,7 @@ export default function OutputsGallery({ projectId, refreshKey, pendingRequestId
     setErr("");
     try {
       const res = await api.get(`/projects/${projectId}/outputs`);
-      const arr = asArray(res.data);
-      setItems(arr);
+      setItems(asArray(res.data));
     } catch (e) {
       setItems([]);
       setErr(e?.response?.data?.message || e.message || "Failed to load outputs");
@@ -116,11 +85,17 @@ export default function OutputsGallery({ projectId, refreshKey, pendingRequestId
     return items.find((x) => String(x?.request) === String(pendingRequestId)) || null;
   }, [items, pendingRequestId]);
 
+  // ✅ moved ABOVE the early return — fixes "Rendered more hooks" error
+  const gridItems = useMemo(() => {
+    if (!pendingRequestId) return items;
+    return items.filter((x) => String(x?.request) !== String(pendingRequestId));
+  }, [items, pendingRequestId]);
+
   useEffect(() => {
     if (pendingRequestId && pendingOutput) {
       if (typeof onPendingResolved === "function") onPendingResolved();
     }
-  }, [pendingRequestId, pendingOutput, onPendingResolved]);
+  }, [pendingRequestId, pendingOutput]);
 
   function openModal(x) {
     const url = pickUrl(x);
@@ -153,12 +128,8 @@ export default function OutputsGallery({ projectId, refreshKey, pendingRequestId
     }
   }
 
+  // early return AFTER all hooks
   if (!projectId) return null;
-
-  const gridItems = (() => {
-    const list = [...items];
-    return list;
-  })();
 
   return (
     <div className={styles.wrap}>
@@ -175,6 +146,7 @@ export default function OutputsGallery({ projectId, refreshKey, pendingRequestId
         <div className={styles.empty}>No outputs yet</div>
       ) : (
         <div className={styles.grid}>
+
           {pendingRequestId && !pendingOutput && (
             <div className={styles.processingCard} aria-live="polite">
               <div className={styles.processingInner}>
@@ -195,21 +167,19 @@ export default function OutputsGallery({ projectId, refreshKey, pendingRequestId
             </button>
           )}
 
-          {gridItems
-            .filter((x) => !pendingRequestId || String(x?.request) !== String(pendingRequestId))
-            .map((x) => {
-              const url = pickUrl(x);
-              if (!url) return null;
-              return (
-                <button key={x._id || url} type="button" className={styles.cardBtn} onClick={() => openModal(x)}>
-                  {isVideo(x) ? (
-                    <video className={styles.video} src={url} controls playsInline preload="metadata" />
-                  ) : (
-                    <img className={styles.img} src={url} alt="" loading="lazy" />
-                  )}
-                </button>
-              );
-            })}
+          {gridItems.map((x) => {
+            const url = pickUrl(x);
+            if (!url) return null;
+            return (
+              <button key={x._id || url} type="button" className={styles.cardBtn} onClick={() => openModal(x)}>
+                {isVideo(x) ? (
+                  <video className={styles.video} src={url} controls playsInline preload="metadata" />
+                ) : (
+                  <img className={styles.img} src={url} alt="" loading="lazy" />
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -219,12 +189,7 @@ export default function OutputsGallery({ projectId, refreshKey, pendingRequestId
             <div className={styles.modalHead}>
               <div className={styles.modalTitle}>Preview</div>
               <div className={styles.modalActions}>
-                <button
-                  type="button"
-                  className={styles.modalBtn}
-                  onClick={() => downloadFile(activeUrl, activeId || "output")}
-                  disabled={deleting}
-                >
+                <button type="button" className={styles.modalBtn} onClick={() => downloadFile(activeUrl, activeId || "output")} disabled={deleting}>
                   Download
                 </button>
                 <button type="button" className={styles.dangerBtn} onClick={deleteOutput} disabled={deleting}>
@@ -235,12 +200,11 @@ export default function OutputsGallery({ projectId, refreshKey, pendingRequestId
                 </button>
               </div>
             </div>
-
             <div className={styles.modalBody}>
               {activeIsVideo ? (
-                <video className={styles.previewVideo} src={activeUrl} controls playsInline autoPlay />
+                <video className={styles.modalVideo} src={activeUrl} controls autoPlay playsInline />
               ) : (
-                <img src={activeUrl} alt="" className={styles.preview} />
+                <img className={styles.modalImg} src={activeUrl} alt="" />
               )}
             </div>
           </div>

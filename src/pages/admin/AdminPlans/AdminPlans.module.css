@@ -247,3 +247,22 @@
   justify-content: flex-end;
   padding: 0 16px 16px;
 }
+.btnDeleteSmall {
+  border: 1px solid rgba(176, 43, 24, 0.50);
+  background: rgba(176, 43, 24, 0.18);
+  color: rgba(220, 80, 60, 0.95);
+  border-radius: 14px;
+  padding: 9px 10px;
+  font-weight: 950;
+  cursor: pointer;
+  transition: background 160ms ease;
+}
+
+.btnDeleteSmall:hover {
+  background: rgba(176, 43, 24, 0.28);
+}
+
+.btnDeleteSmall:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

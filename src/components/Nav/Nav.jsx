@@ -39,6 +39,10 @@ export default function Nav() {
         <NavLink className={styles.link} to="/plans">
           Pricing
         </NavLink>
+                    <Link className={styles.link} to="/profile" onClick={close}>
+              Profile
+            </Link>
+
 
         {user?.role === "admin" && (
           <NavLink className={styles.link} to="/admin">
@@ -101,6 +105,9 @@ export default function Nav() {
             </Link>
             <Link className={styles.link} to="/plans" onClick={close}>
               Pricing
+            </Link>
+            <Link className={styles.link} to="/profile" onClick={close}>
+              Profile
             </Link>
 
             {user?.role === "admin" && (
