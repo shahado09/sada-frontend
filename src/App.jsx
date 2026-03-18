@@ -5,7 +5,7 @@ import RequireAdmin from "./auth/RequireAdmin";
 
 import MainLayout from "./layouts/MainLayout";
 
-import Login from "./pages/Login/Login";
+import Login from "./pages/login/Login";
 import Signup from "./pages/Signup/Signup";
 import VerifyEmailPage from "./pages/VerifyEmail/VerifyEmailPage";
 import ProfilePage from "./pages/Profile/ProfilePage";
