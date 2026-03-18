@@ -15,6 +15,7 @@ const EMPTY_FORM = {
   kind: "t2i",
   code: "",
   name: "",
+  nameAr: "",
   basePrompt: "",
   fields: [],
   options: [],
@@ -252,10 +253,12 @@ export default function AdminPrompts() {
       kind: form.kind,
       code: normKey(form.code),
       name: form.name.trim(),
+      nameAr: String(form.nameAr || "").trim(),
       basePrompt: form.basePrompt,
       fields: (form.fields || []).map((f) => ({
         key: normKey(f.key),
         label: String(f.label || "").trim(),
+        labelAr: String(f.labelAr || "").trim(),
         type: f.type || "select",
         required: !!f.required,
         allowNone: !!f.allowNone,
@@ -265,6 +268,7 @@ export default function AdminPrompts() {
         key: normKey(o.key),
         value: normKey(o.value),
         label: String(o.label || "").trim(),
+        labelAr: String(o.labelAr || "").trim(),
         promptSnippet: String(o.promptSnippet || ""),
         isNone: !!o.isNone,
       })),
@@ -434,6 +438,10 @@ export default function AdminPrompts() {
               <input className={styles.input} value={form.name} onChange={(e) => setBasic("name", e.target.value)} disabled={saving} />
             </div>
             <div className={`${styles.field} ${styles.fieldWide}`}>
+              <div className={styles.label}>Name (Arabic) — الاسم بالعربي</div>
+              <input className={styles.input} value={form.nameAr || ""} onChange={(e) => setBasic("nameAr", e.target.value)} disabled={saving} dir="rtl" placeholder="مثال: تصوير موديل أزياء" />
+            </div>
+            <div className={`${styles.field} ${styles.fieldWide}`}>
               <div className={styles.label}>Base Prompt — use {"{field_key}"} as placeholders</div>
               <textarea className={styles.textarea} value={form.basePrompt} onChange={(e) => setBasic("basePrompt", e.target.value)} disabled={saving} rows={8} />
             </div>
@@ -492,6 +500,10 @@ export default function AdminPrompts() {
                     <div className={`${styles.field} ${styles.fieldWide}`}>
                       <div className={styles.label}>Label (shown to user)</div>
                       <input className={styles.input} value={activeField.label} onChange={(e) => updateField(activeField.key, { label: e.target.value })} disabled={saving} />
+                    </div>
+                    <div className={`${styles.field} ${styles.fieldWide}`}>
+                      <div className={styles.label}>Label (Arabic) — التسمية بالعربي</div>
+                      <input className={styles.input} value={activeField.labelAr || ""} onChange={(e) => updateField(activeField.key, { labelAr: e.target.value })} disabled={saving} dir="rtl" placeholder="التسمية بالعربي" />
                     </div>
                     <div className={`${styles.field} ${styles.fieldWide}`}>
                       <div className={styles.label}>UI Hint (optional helper text)</div>
@@ -572,6 +584,7 @@ export default function AdminPrompts() {
                           <tr>
                             <th>Value</th>
                             <th>Label</th>
+                            <th>Label (AR)</th>
                             <th>Prompt Snippet</th>
                             <th></th>
                           </tr>
@@ -581,6 +594,7 @@ export default function AdminPrompts() {
                             <tr key={`${o.key}:${o.value}`}>
                               <td><input className={styles.inputSm} value={o.value} onChange={(e) => updateOption(activeField.key, o.value, { value: e.target.value })} disabled={saving} /></td>
                               <td><input className={styles.inputSm} value={o.label} onChange={(e) => updateOption(activeField.key, o.value, { label: e.target.value })} disabled={saving} /></td>
+                              <td><input className={styles.inputSm} value={o.labelAr || ""} onChange={(e) => updateOption(activeField.key, o.value, { labelAr: e.target.value })} disabled={saving} dir="rtl" placeholder="بالعربي" /></td>
                               <td><textarea className={styles.textareaSm} value={o.promptSnippet || ""} onChange={(e) => updateOption(activeField.key, o.value, { promptSnippet: e.target.value })} disabled={saving} /></td>
                               <td className={styles.center}><button className={styles.dangerBtnSm} onClick={() => removeOption(activeField.key, o.value)} type="button" disabled={saving}>×</button></td>
                             </tr>

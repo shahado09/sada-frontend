@@ -254,8 +254,16 @@ export default function AdminPlans() {
                 </label>
               </div>
               <label className={styles.field}>
+                <span className={styles.label}>Name (Arabic) — الاسم بالعربي</span>
+                <input className={styles.input} name="nameAr" value={form.nameAr || ""} onChange={onChange} placeholder="الاسم بالعربي" dir="rtl" />
+              </label>
+              <label className={styles.field}>
                 <span className={styles.label}>Description</span>
                 <input className={styles.input} name="description" value={form.description} onChange={onChange} />
+              </label>
+              <label className={styles.field}>
+                <span className={styles.label}>Description (Arabic) — الوصف بالعربي</span>
+                <input className={styles.input} name="descriptionAr" value={form.descriptionAr || ""} onChange={onChange} placeholder="الوصف بالعربي" dir="rtl" />
               </label>
               <div className={styles.grid4}>
                 <label className={styles.field}>
@@ -307,8 +315,16 @@ export default function AdminPlans() {
                 </label>
               </div>
               <label className={styles.field}>
+                <span className={styles.label}>Name (Arabic) — الاسم بالعربي</span>
+                <input className={styles.input} name="nameAr" value={form.nameAr || ""} onChange={onChange} placeholder="الاسم بالعربي" dir="rtl" />
+              </label>
+              <label className={styles.field}>
                 <span className={styles.label}>Description</span>
                 <input className={styles.input} name="description" value={form.description} onChange={onChange} />
+              </label>
+              <label className={styles.field}>
+                <span className={styles.label}>Description (Arabic) — الوصف بالعربي</span>
+                <input className={styles.input} name="descriptionAr" value={form.descriptionAr || ""} onChange={onChange} placeholder="الوصف بالعربي" dir="rtl" />
               </label>
               <div className={styles.grid4}>
                 <label className={styles.field}>

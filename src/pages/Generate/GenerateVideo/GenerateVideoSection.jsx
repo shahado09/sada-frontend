@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import api from "../../../api/api";
 import ProjectPicker from "../../../components/ProjectPicker/ProjectPicker";
 import OutputsGallery from "../../../components/OutputsGallery/OutputsGallery";
@@ -51,6 +52,8 @@ function buildDefaultSelections(template) {
 }
 
 export default function GenerateVideoSection({ category }) {
+  const { t, i18n } = useTranslation();
+  const isAr = i18n.language === 'ar';
   const [projectId, setProjectId]         = useState("");
   const [kind, setKind]                   = useState("t2v");
   const [type, setType]                   = useState("guided");
@@ -106,7 +109,7 @@ export default function GenerateVideoSection({ category }) {
         if (active?.requestId && active?.section === category && active?.mode === "video") {
           if (active.projectId) setProjectId(String(active.projectId));
           setPendingRequestId(String(active.requestId));
-          setMsg("Resuming…");
+          setMsg(t("generate.resuming"));
           setRefreshKey((x) => x + 1);
           startPollingSyncVideo(active.requestId);
         }
@@ -179,7 +182,7 @@ export default function GenerateVideoSection({ category }) {
   function resolvePending(doneMessage) {
     stopPolling();
     setPendingRequestId("");
-    setMsg(doneMessage || "Done");
+    setMsg(doneMessage || t("generate.done"));
     setRefreshKey((x) => x + 1);
   }
 
@@ -191,7 +194,7 @@ export default function GenerateVideoSection({ category }) {
         const req = await runSyncOnce(rid);
         setRefreshKey((x) => x + 1);
         const st = req?.status || "";
-        if (st === "completed") { resolvePending("Done"); return; }
+        if (st === "completed") { resolvePending(t("generate.done")); return; }
         if (st === "failed")    { resolvePending(req?.error || "Failed"); return; }
         setMsg("Processing…");
       } catch {}
@@ -228,12 +231,12 @@ export default function GenerateVideoSection({ category }) {
       const rid = res?.data?.requestId || "";
       if (!rid) throw new Error("Missing requestId");
       setPendingRequestId(rid);
-      setMsg("Creating…");
+      setMsg(t("generate.generating"));
       setRefreshKey((x) => x + 1);
       try {
         const first = await runSyncOnce(rid);
         setRefreshKey((x) => x + 1);
-        if (first?.status === "completed") { resolvePending("Done"); return; }
+        if (first?.status === "completed") { resolvePending(t("generate.done")); return; }
         if (first?.status === "failed")    { resolvePending(first?.error || "Failed"); return; }
       } catch {}
       startPollingSyncVideo(rid);
@@ -250,39 +253,39 @@ export default function GenerateVideoSection({ category }) {
     <div className={styles.grid}>
       <aside className={styles.side}>
         <div className={styles.card}>
-          <div className={styles.cardTitle}>Project</div>
+          <div className={styles.cardTitle}>{t("generate.project")}</div>
           <ProjectPicker category={category} value={projectId} onChange={setProjectId} />
         </div>
 
         <div className={styles.card}>
-          <div className={styles.cardTitle}>Generate Video</div>
+          <div className={styles.cardTitle}>{t("generate.generate")}</div>
 
           <div className={styles.row}>
-            <button type="button" className={kind === "t2v" ? styles.pillActive : styles.pill} onClick={() => setKind("t2v")} disabled={!!pendingRequestId}>Text → Video</button>
-            <button type="button" className={kind === "i2v" ? styles.pillActive : styles.pill} onClick={() => setKind("i2v")} disabled={!!pendingRequestId}>Image → Video</button>
+            <button type="button" className={kind === "t2v" ? styles.pillActive : styles.pill} onClick={() => setKind("t2v")} disabled={!!pendingRequestId}>{t("generate.textToVideo")}</button>
+            <button type="button" className={kind === "i2v" ? styles.pillActive : styles.pill} onClick={() => setKind("i2v")} disabled={!!pendingRequestId}>{t("generate.imageToVideo")}</button>
           </div>
 
           <div className={styles.row}>
-            <button type="button" className={type === "guided" ? styles.pillActive : styles.pill} onClick={() => setType("guided")} disabled={!!pendingRequestId}>Guided</button>
-            <button type="button" className={type === "pro" ? styles.pillActive : styles.pill} onClick={() => setType("pro")} disabled={!!pendingRequestId}>Pro Prompt</button>
+            <button type="button" className={type === "guided" ? styles.pillActive : styles.pill} onClick={() => setType("guided")} disabled={!!pendingRequestId}>{t("generate.guided")}</button>
+            <button type="button" className={type === "pro" ? styles.pillActive : styles.pill} onClick={() => setType("pro")} disabled={!!pendingRequestId}>{t("generate.proPrompt")}</button>
           </div>
 
           <div className={styles.field}>
-            <div className={styles.label}>Model</div>
+            <div className={styles.label}>{t("generate.model")}</div>
             <select className={`${styles.select} adminSelectFix`} value={model} onChange={(e) => setModel(e.target.value)} disabled={!!pendingRequestId}>
               {MODELS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
             </select>
           </div>
 
           <div className={styles.field}>
-            <div className={styles.label}>Aspect Ratio</div>
+            <div className={styles.label}>{t("generate.aspectRatio")}</div>
             <select className={`${styles.select} adminSelectFix`} value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)} disabled={!!pendingRequestId}>
               {RATIOS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
             </select>
           </div>
 
           <div className={styles.field}>
-            <div className={styles.label}>Duration</div>
+            <div className={styles.label}>{t("generate.duration")}</div>
             <div className={styles.durationGrid}>
               {allowedDurations(model).map((d) => (
                 <button key={d} type="button"
@@ -297,21 +300,21 @@ export default function GenerateVideoSection({ category }) {
 
           <label className={styles.check}>
             <input type="checkbox" checked={!!generateAudio} onChange={(e) => setGenerateAudio(e.target.checked)} disabled={!!pendingRequestId} />
-            <span>Generate Audio {generateAudio ? <span className={styles.audioNote}>(×2 credits)</span> : null}</span>
+            <span>{t("generate.generateAudio")} {generateAudio ? <span className={styles.audioNote}>{t("generate.audioDouble")}</span> : null}</span>
           </label>
 
           {type === "guided" ? (
             <>
               <div className={styles.field}>
-                <div className={styles.label}>Template</div>
+                <div className={styles.label}>{t("generate.template")}</div>
                 <select className={`${styles.select} adminSelectFix`} value={templateCode} onChange={(e) => setTemplateCode(e.target.value)} disabled={!!pendingRequestId || !templates.length}>
-                  {templates.map((t) => <option key={t.code} value={t.code}>{t.name}</option>)}
+                  {templates.map((t) => <option key={t.code} value={t.code}>{isAr && t.nameAr ? t.nameAr : t.name}</option>)}
                 </select>
               </div>
 
               {(selectedTemplate?.fields || []).map((f) => (
                 <div className={styles.field} key={f.key}>
-                  <div className={styles.label}>{f.label}</div>
+                  <div className={styles.label}>{isAr && f.labelAr ? f.labelAr : f.label}</div>
                   {f.type === "select" ? (
                     <select className={`${styles.select} adminSelectFix`} value={selections[f.key] ?? ""} onChange={(e) => setFieldValue(f.key, e.target.value)} disabled={!!pendingRequestId}>
                       {f.allowNone && <option value="none">None</option>}
@@ -327,20 +330,20 @@ export default function GenerateVideoSection({ category }) {
               ))}
 
               <div className={styles.field}>
-                <div className={styles.label}>Extra prompt</div>
+                <div className={styles.label}>{t("generate.extraPrompt")}</div>
                 <textarea className={styles.textarea} value={extraPrompt} onChange={(e) => setExtraPrompt(e.target.value)} disabled={!!pendingRequestId} />
               </div>
             </>
           ) : (
             <div className={styles.field}>
-              <div className={styles.label}>Prompt</div>
+              <div className={styles.label}>{t("generate.prompt")}</div>
               <textarea className={styles.textarea} value={proPrompt} onChange={(e) => setProPrompt(e.target.value)} disabled={!!pendingRequestId} />
             </div>
           )}
 
           {kind === "i2v" && (
             <div className={styles.field}>
-              <div className={styles.label}>Upload images</div>
+              <div className={styles.label}>{t("generate.uploadImages")}</div>
               <input
                 type="file"
                 multiple
@@ -365,8 +368,8 @@ export default function GenerateVideoSection({ category }) {
 
           <div className={styles.actions}>
             <button type="button" className={styles.primary} onClick={generate} disabled={generateDisabled}>
-              <span className={styles.btnText}>{pendingRequestId ? "Processing…" : "Generate"}</span>
-              <span className={styles.btnMeta}>{cost} credits</span>
+              <span className={styles.btnText}>{pendingRequestId ? t("generate.generating") : t("generate.generate_btn")}</span>
+              <span className={styles.btnMeta}>{cost} {t("generate.credits_suffix")}</span>
             </button>
           </div>
 
@@ -376,12 +379,12 @@ export default function GenerateVideoSection({ category }) {
 
       <section className={styles.main}>
         <div className={styles.mainCard}>
-          <div className={styles.mainTitle}>Outputs</div>
+          <div className={styles.mainTitle}>{t("generate.outputs")}</div>
           <OutputsGallery
             projectId={projectId}
             refreshKey={refreshKey}
             pendingRequestId={pendingRequestId}
-            onPendingResolved={() => resolvePending("Done")}
+            onPendingResolved={() => resolvePending(t("generate.done"))}
           />
         </div>
       </section>

@@ -7,6 +7,7 @@ import MainLayout from "./layouts/MainLayout";
 
 import Login from "./pages/Login/Login";
 import Signup from "./pages/Signup/Signup";
+import VerifyEmailPage from "./pages/VerifyEmail/VerifyEmailPage";
 import ProfilePage from "./pages/Profile/ProfilePage";
 import Dashboard from "./pages/Dashboard/Dashboard";
 
@@ -27,8 +28,11 @@ import AdminPlans from "./pages/admin/AdminPlans/AdminPlans";
 import AdminPacks from "./pages/admin/AdminPacks/AdminPacks";
 import AdminUsers from "./pages/admin/AdminUsers/AdminUsers";
 import AdminPrompts from "./pages/admin/AdminPrompts/AdminPrompts";
-import AdminLedger from "./pages/admin/AdminLedger/AdminLedger"; 
+import AdminLedger from "./pages/admin/AdminLedger/AdminLedger";
 import AdminPricing from "./pages/admin/AdminPricing/AdminPricing";
+
+import LandingPage from "./pages/Landing/LandingPage";
+import PolicyPage from "./pages/Policy/PolicyPage";
 
 import "./styles/adminControls.css";
 import GeneratePage from "./pages/Generate/GeneratePage/GeneratePage";
@@ -38,9 +42,18 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+          {/* ── Public routes ── */}
+          <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/policy" element={<PolicyPage />} />
 
+          {/* Plans & Packs — public (view only) */}
+          <Route path="/plans" element={<PlansPage />} />
+          <Route path="/packs" element={<PacksPage />} />
+
+          {/* ── Protected routes ── */}
           <Route
             element={
               <RequireAuth>
@@ -48,7 +61,6 @@ export default function App() {
               </RequireAuth>
             }
           >
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/profile" element={<ProfilePage />} />
 
@@ -56,9 +68,7 @@ export default function App() {
             <Route path="/projects/new" element={<CreateProject />} />
             <Route path="/projects/:id" element={<ProjectDetails />} />
 
-            <Route path="/plans" element={<PlansPage />} />
-            <Route path="/packs" element={<PacksPage />} />
-
+            {/* Payment — protected */}
             <Route path="/payment/start" element={<PaymentStartPage />} />
             <Route path="/payment/:id" element={<PaymentFormPage />} />
             <Route path="/payment/request/:id" element={<PaymentStatusPage />} />
@@ -68,6 +78,7 @@ export default function App() {
             <Route path="/generate/creator" element={<GeneratePage category="creator" title="Creator AI" subtitle="Content for creators: posters, edits, reels." />} />
           </Route>
 
+          {/* ── Admin routes ── */}
           <Route
             path="/admin"
             element={
@@ -82,7 +93,7 @@ export default function App() {
             <Route path="packs" element={<AdminPacks />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="prompts" element={<AdminPrompts />} />
-            <Route path="ledger" element={<AdminLedger />} /> 
+            <Route path="ledger" element={<AdminLedger />} />
             <Route path="pricing" element={<AdminPricing />} />
           </Route>
 

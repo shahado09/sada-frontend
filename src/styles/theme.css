@@ -1,67 +1,58 @@
 /* ===============================
-   THEME TOKENS – SADA (FINAL)
+   THEME TOKENS – SADA
    =============================== */
 
 :root {
-  /* Brand (same as logo dark blue) */
   --navy: #0b1b2b;
 
-  /* ===== LIGHT MODE (VERY LIGHT BEIGE) ===== */
-  --bg: #f1f3fb;        /* خلفية فاتحة جدًا */
-  --surface: #f7f1e8;   /* nav + hero */
-  --surface-2:  #f7f1e8; /* cards */
+  /* ===== LIGHT MODE ===== */
+  --bg:        #f5efe6;   /* بيج دافئ */
+  --surface:   #fdf8f2;   /* أفتح شوي */
+  --surface-2: #ede7dc;   /* بيج أغمق للكاردز */
 
-  /* Text = نفس لون اللوقو */
-  --text: var(--navy);
-  --muted: rgba(11, 27, 43, 0.55);
+  --text:  #0b1b2b;
+  --muted: rgba(11, 27, 43, 0.50);
 
-  /* Borders كحلي */
-  --border: rgba(27, 90, 152, 0.22);
+  --border: rgba(11, 27, 43, 0.12);
 
-  /* Shadows (ناعمة) */
-  --shadow: 0 14px 40px rgba(11, 27, 43, 0.08);
-  --shadow-soft: 0 8px 22px rgba(11, 27, 43, 0.06);
+  --shadow:      0 14px 40px rgba(11, 27, 43, 0.10);
+  --shadow-soft: 0 4px 16px  rgba(11, 27, 43, 0.07);
 
   /* Layout */
   --radius: 18px;
-  --max: 1200px;
-  --pad: clamp(14px, 2.5vw, 28px);
-  --gap: clamp(14px, 2vw, 22px);
+  --max:    1200px;
+  --pad:    clamp(14px, 2.5vw, 28px);
+  --gap:    clamp(14px, 2vw, 22px);
 
   /* Motion */
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --dur: 220ms;
+  --dur:  220ms;
 }
 
-/* ===== DARK MODE (UNCHANGED) ===== */
+/* ===== DARK MODE ===== */
 [data-theme="dark"] {
-  --bg: #081a2a;
-  --surface: #0c2236;
+  --bg:        #081a2a;
+  --surface:   #0c2236;
   --surface-2: #0a1f31;
 
-  --text: #f4eee6;
-  --muted: rgba(244, 238, 230, 0.75);
-  --border: rgba(244, 238, 230, 0.14);
+  --text:  #f4eee6;
+  --muted: rgba(244, 238, 230, 0.65);
 
-  --shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
-  --shadow-soft: 0 10px 34px rgba(0, 0, 0, 0.35);
+  --border: rgba(244, 238, 230, 0.12);
+
+  --shadow:      0 18px 60px rgba(0, 0, 0, 0.45);
+  --shadow-soft: 0 8px 28px  rgba(0, 0, 0, 0.30);
 }
 
 /* ===== BASE ===== */
-html,
-body {
+html, body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  transition: background 200ms ease, color 200ms ease;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
-img {
-  max-width: 100%;
-  display: block;
-}
+img { max-width: 100%; display: block; }

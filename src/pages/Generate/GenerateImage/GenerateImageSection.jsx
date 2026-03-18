@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import api from "../../../api/api";
 import ProjectPicker from "../../../components/ProjectPicker/ProjectPicker";
 import OutputsGallery from "../../../components/OutputsGallery/OutputsGallery";
@@ -53,6 +54,8 @@ export default function GenerateImageSection({ category }) {
   const [pendingRequestId, setPendingRequestId] = useState("");
   const [refreshKey, setRefreshKey]             = useState(0);
 
+  const { t, i18n } = useTranslation();
+  const isAr = i18n.language === 'ar';
   const [imagePricing, setImagePricing] = useState({ normal: 2, high: 4 });
 
   const didInit = useRef(false);
@@ -200,36 +203,36 @@ export default function GenerateImageSection({ category }) {
       <aside className={styles.side}>
 
         <div className={styles.card}>
-          <div className={styles.cardTitle}>Project</div>
+          <div className={styles.cardTitle}>{t("generate.project")}</div>
           <ProjectPicker category={category} value={projectId} onChange={setProjectId} />
         </div>
 
         <div className={styles.card}>
-          <div className={styles.cardTitle}>Generate</div>
+          <div className={styles.cardTitle}>{t("generate.generate")}</div>
 
           <div className={styles.row}>
             <button type="button" className={kind === "t2i" ? styles.pillActive : styles.pill}
-              onClick={() => setKind("t2i")} disabled={!!pendingRequestId}>Text → Image</button>
+              onClick={() => setKind("t2i")} disabled={!!pendingRequestId}>{t("generate.textToImage")}</button>
             <button type="button" className={kind === "i2i" ? styles.pillActive : styles.pill}
-              onClick={() => setKind("i2i")} disabled={!!pendingRequestId}>Image → Image</button>
+              onClick={() => setKind("i2i")} disabled={!!pendingRequestId}>{t("generate.imageToImage")}</button>
           </div>
 
           <div className={styles.row}>
             <button type="button" className={type === "guided" ? styles.pillActive : styles.pill}
-              onClick={() => setType("guided")} disabled={!!pendingRequestId}>Guided</button>
+              onClick={() => setType("guided")} disabled={!!pendingRequestId}>{t("generate.guided")}</button>
             <button type="button" className={type === "pro" ? styles.pillActive : styles.pill}
-              onClick={() => setType("pro")} disabled={!!pendingRequestId}>Pro Prompt</button>
+              onClick={() => setType("pro")} disabled={!!pendingRequestId}>{t("generate.proPrompt")}</button>
           </div>
 
           <div className={styles.row}>
             <button type="button" className={quality === "normal" ? styles.pillActive : styles.pill}
-              onClick={() => setQuality("normal")} disabled={!!pendingRequestId}>Normal</button>
+              onClick={() => setQuality("normal")} disabled={!!pendingRequestId}>{t("generate.normal")}</button>
             <button type="button" className={quality === "high" ? styles.pillActive : styles.pill}
-              onClick={() => setQuality("high")} disabled={!!pendingRequestId}>High</button>
+              onClick={() => setQuality("high")} disabled={!!pendingRequestId}>{t("generate.high")}</button>
           </div>
 
           <div className={styles.field}>
-            <div className={styles.label}>Format</div>
+            <div className={styles.label}>{t("generate.format")}</div>
             <select className={`${styles.select} adminSelectFix`} value={aspectRatio}
               onChange={(e) => setAspectRatio(e.target.value)} disabled={!!pendingRequestId}>
               {RATIOS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
@@ -239,20 +242,20 @@ export default function GenerateImageSection({ category }) {
           {type === "guided" ? (
             <>
               <div className={styles.field}>
-                <div className={styles.label}>Template</div>
+                <div className={styles.label}>{t("generate.template")}</div>
                 {templates.length === 0 ? (
                   <div className={styles.msg}>No templates yet — use Pro Prompt mode</div>
                 ) : (
                   <select className={`${styles.select} adminSelectFix`} value={templateCode}
                     onChange={(e) => setTemplateCode(e.target.value)} disabled={!!pendingRequestId}>
-                    {templates.map((t) => <option key={t.code} value={t.code}>{t.name}</option>)}
+                    {templates.map((t) => <option key={t.code} value={t.code}>{isAr && t.nameAr ? t.nameAr : t.name}</option>)}
                   </select>
                 )}
               </div>
 
               {(selectedTemplate?.fields ?? []).map((f) => (
                 <div key={f.key} className={styles.field}>
-                  <div className={styles.label}>{f.label}</div>
+                  <div className={styles.label}>{isAr && f.labelAr ? f.labelAr : f.label}</div>
                   {f.type === "select" ? (
                     <select className={`${styles.select} adminSelectFix`}
                       value={selections[f.key] ?? ""}
@@ -261,7 +264,7 @@ export default function GenerateImageSection({ category }) {
                       {f.allowNone && <option value="none">None</option>}
                       {(selectedTemplate.options ?? [])
                         .filter((o) => o.key === f.key)
-                        .map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        .map((o) => <option key={o.value} value={o.value}>{isAr && o.labelAr ? o.labelAr : o.label}</option>)}
                     </select>
                   ) : (
                     <input className={styles.select}
@@ -273,14 +276,14 @@ export default function GenerateImageSection({ category }) {
               ))}
 
               <div className={styles.field}>
-                <div className={styles.label}>Extra prompt (optional)</div>
+                <div className={styles.label}>{t("generate.extraPrompt")}</div>
                 <textarea className={styles.textarea} value={extraPrompt}
                   onChange={(e) => setExtraPrompt(e.target.value)} disabled={!!pendingRequestId} />
               </div>
             </>
           ) : (
             <div className={styles.field}>
-              <div className={styles.label}>Prompt</div>
+              <div className={styles.label}>{t("generate.prompt")}</div>
               <textarea className={styles.textarea} value={proPrompt}
                 onChange={(e) => setProPrompt(e.target.value)} disabled={!!pendingRequestId} />
             </div>
@@ -288,7 +291,7 @@ export default function GenerateImageSection({ category }) {
 
           {kind === "i2i" && (
             <div className={styles.field}>
-              <div className={styles.label}>Upload up to 3 images</div>
+              <div className={styles.label}>{t("generate.uploadImages")}</div>
               <input
                 type="file"
                 multiple
@@ -314,7 +317,7 @@ export default function GenerateImageSection({ category }) {
 
           <div className={styles.actions}>
             <button type="button" className={styles.primary} onClick={generate} disabled={generateDisabled}>
-              <span className={styles.btnText}>{pendingRequestId ? "Creating…" : "Generate"}</span>
+              <span className={styles.btnText}>{pendingRequestId ? t("generate.generating") : t("generate.generate_btn")}</span>
               <span className={styles.btnMeta}>{cost} credits</span>
             </button>
           </div>
@@ -325,7 +328,7 @@ export default function GenerateImageSection({ category }) {
 
       <section className={styles.main}>
         <div className={styles.mainCard}>
-          <div className={styles.mainTitle}>Outputs</div>
+          <div className={styles.mainTitle}>{t("generate.outputs")}</div>
           <OutputsGallery
             projectId={projectId}
             refreshKey={refreshKey}

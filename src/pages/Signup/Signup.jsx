@@ -40,7 +40,7 @@ export default function Signup() {
     try {
       await signup({ email, password, confirmPassword });
       setSuccessMsg("Account created!");
-      navigate("/");
+      navigate("/verify-email", { state: { email } });
     } catch (err) {
       setErrors({ form: err.response?.data?.message || "Signup failed" });
     } finally {

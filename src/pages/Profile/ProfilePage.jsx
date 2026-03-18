@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../../auth/AuthContext";
 import api from "../../api/api";
 import styles from "./ProfilePage.module.css";
 
-const REASON_LABEL = {
-  pack_purchase: "Credit Pack",
-  subscription_grant: "Subscription",
-  generation_spend: "Generation",
-  refund: "Refund",
-  manual_adjustment: "Adjustment",
-};
+function formatDate(d, lang) {
+  return new Date(d).toLocaleDateString(lang === "ar" ? "ar-SA" : "en-US", {
+    year: "numeric", month: "short", day: "numeric",
+  });
+}
 
 const REASON_ICON = {
   pack_purchase: "💳",
@@ -19,21 +19,19 @@ const REASON_ICON = {
   manual_adjustment: "🔧",
 };
 
-function formatDate(d) {
-  return new Date(d).toLocaleDateString("en-US", {
-    year: "numeric", month: "short", day: "numeric",
-  });
-}
-
 export default function ProfilePage() {
   const { user: authUser } = useAuth();
+  const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
+  const lang = i18n.language;
 
   const [profile, setProfile]   = useState(null);
   const [ledger, setLedger]     = useState([]);
+  const [payments, setPayments] = useState([]);
   const [loading, setLoading]   = useState(true);
 
-  const [newEmail, setNewEmail] = useState("");
-  const [emailMsg, setEmailMsg] = useState({ text: "", ok: false });
+  const [newEmail, setNewEmail]   = useState("");
+  const [emailMsg, setEmailMsg]   = useState({ text: "", ok: false });
   const [emailBusy, setEmailBusy] = useState(false);
 
   const [curPass, setCurPass]         = useState("");
@@ -46,9 +44,11 @@ export default function ProfilePage() {
     Promise.all([
       api.get("/profile"),
       api.get("/ledger/me?limit=20"),
-    ]).then(([profRes, ledgerRes]) => {
+      api.get("/payments/my").catch(() => ({ data: [] })),
+    ]).then(([profRes, ledgerRes, payRes]) => {
       setProfile(profRes.data.user);
       setLedger(ledgerRes.data.entries || []);
+      setPayments(Array.isArray(payRes.data) ? payRes.data : (payRes.data?.items || []));
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
@@ -75,7 +75,7 @@ export default function ProfilePage() {
       setPassMsg({ text: "Passwords don't match", ok: false }); return;
     }
     if (newPass.length < 8) {
-      setPassMsg({ text: "Min 8 characters", ok: false }); return;
+      setPassMsg({ text: t("profile.minChars"), ok: false }); return;
     }
     setPassBusy(true); setPassMsg({ text: "", ok: false });
     try {
@@ -90,14 +90,10 @@ export default function ProfilePage() {
   const email      = profile?.email || authUser?.email || "";
   const credits    = profile?.credits ?? authUser?.credits ?? 0;
   const initials   = email[0]?.toUpperCase() || "U";
-  const joinedDate = profile?.createdAt ? formatDate(profile.createdAt) : null;
+  const joinedDate = profile?.createdAt ? formatDate(profile.createdAt, lang) : null;
 
   if (loading) {
-    return (
-      <div className={styles.loadWrap}>
-        <div className={styles.spinner} />
-      </div>
-    );
+    return <div className={styles.loadWrap}><div className={styles.spinner} /></div>;
   }
 
   return (
@@ -112,96 +108,137 @@ export default function ProfilePage() {
           <div className={styles.heroEmail}>{email}</div>
           <div className={styles.heroBadgeRow}>
             <span className={styles.heroBadge}>
-              {profile?.role === "admin" ? "Admin" : "Member"}
+              {profile?.role === "admin" ? t("profile.admin") : t("profile.member")}
             </span>
             {joinedDate && (
-              <span className={styles.heroJoined}>Joined {joinedDate}</span>
+              <span className={styles.heroJoined}>{t("profile.joined", { date: joinedDate })}</span>
             )}
           </div>
         </div>
         <div className={styles.creditsBox}>
           <div className={styles.creditsNum}>{credits}</div>
-          <div className={styles.creditsLabel}>Credits</div>
+          <div className={styles.creditsLabel}>{t("profile.credits")}</div>
         </div>
       </div>
 
       {/* Credit History */}
       <div className={styles.card}>
-        <div className={styles.cardHead}>Credit History</div>
-        {ledger.length === 0 ? (
-          <div className={styles.empty}>No transactions yet</div>
-        ) : (
-          <div className={styles.ledgerList}>
-            {ledger.map((entry) => (
-              <div key={entry._id} className={styles.ledgerRow}>
-                <div className={styles.ledgerIcon}>
-                  {REASON_ICON[entry.reason] || "•"}
-                </div>
-                <div className={styles.ledgerInfo}>
-                  <div className={styles.ledgerReason}>
-                    {REASON_LABEL[entry.reason] || entry.reason}
+        <div className={styles.cardHead}>
+          {t("profile.creditHistory")}
+          <span className={styles.cardCount}>{ledger.length}</span>
+        </div>
+        <div className={styles.cardBody}>
+          {ledger.length === 0 ? (
+            <div className={styles.empty}>{t("profile.noTransactions")}</div>
+          ) : (
+            <div className={styles.ledgerList}>
+              {ledger.map((entry) => (
+                <div key={entry._id} className={styles.ledgerRow}>
+                  <div className={styles.ledgerIcon}>{REASON_ICON[entry.reason] || "•"}</div>
+                  <div className={styles.ledgerInfo}>
+                    <div className={styles.ledgerReason}>
+                      {t(`profile.reasons.${entry.reason}`, { defaultValue: entry.reason })}
+                    </div>
+                    <div className={styles.ledgerDate}>{formatDate(entry.createdAt, lang)}</div>
                   </div>
-                  <div className={styles.ledgerDate}>{formatDate(entry.createdAt)}</div>
+                  <div className={`${styles.ledgerPoints} ${entry.type === "credit" ? styles.creditPts : styles.debitPts}`}>
+                    {entry.type === "credit" ? "+" : "−"}{entry.points}
+                  </div>
                 </div>
-                <div className={`${styles.ledgerPoints} ${entry.type === "credit" ? styles.creditPts : styles.debitPts}`}>
-                  {entry.type === "credit" ? "+" : "−"}{entry.points}
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Payment History */}
+      <div className={styles.card}>
+        <div className={styles.cardHead}>
+          {t("profile.paymentHistory")}
+          <span className={styles.cardCount}>{payments.length}</span>
+        </div>
+        <div className={styles.cardBody}>
+          {payments.length === 0 ? (
+            <div className={styles.empty}>{t("profile.noPayments")}</div>
+          ) : (
+            <div className={styles.paymentList}>
+              {payments.map((p) => (
+                <div key={p._id} className={styles.paymentRow}>
+                  <div className={styles.paymentInfo}>
+                    <div className={styles.paymentItem}>{p.itemCode}</div>
+                    <div className={styles.paymentDate}>{formatDate(p.createdAt, lang)}</div>
+                  </div>
+                  <div className={styles.paymentMeta}>
+                    <span className={`${styles.paymentStatus} ${styles[`status_${p.status}`]}`}>
+                      {t(`profile.statuses.${p.status}`, { defaultValue: p.status })}
+                    </span>
+                    {p.amountBHD && (
+                      <span className={styles.paymentAmount}>{p.amountBHD} BD</span>
+                    )}
+                  </div>
+                  {p.status === "rejected" && p.rejectionReason && (
+                    <div className={styles.paymentReason}>
+                      {t("profile.reason")} {p.rejectionReason}
+                    </div>
+                  )}
+                  {p.status === "rejected" && (
+                    <button className={styles.resubmitBtn}
+                      onClick={() => navigate(`/payment/${p._id}`)}>
+                      {t("profile.resubmit")}
+                    </button>
+                  )}
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Change Email */}
       <div className={styles.card}>
-        <div className={styles.cardHead}>Change Email</div>
+        <div className={styles.cardHead}>{t("profile.changeEmail")}</div>
+        <div className={styles.cardForm}>
         <div className={styles.formRow}>
-          <label className={styles.label}>Current</label>
+          <label className={styles.label}>{t("profile.current")}</label>
           <div className={styles.readOnly}>{email}</div>
         </div>
         <div className={styles.formRow}>
-          <label className={styles.label}>New email</label>
-          <input
-            className={styles.input}
-            type="email"
-            placeholder="new@email.com"
-            value={newEmail}
-            onChange={(e) => setNewEmail(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleEmailSave()}
-          />
+          <label className={styles.label}>{t("profile.newEmail")}</label>
+          <input className={styles.input} type="email" placeholder="new@email.com"
+            value={newEmail} onChange={(e) => setNewEmail(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleEmailSave()} />
         </div>
-        {emailMsg.text && (
-          <div className={emailMsg.ok ? styles.ok : styles.err}>{emailMsg.text}</div>
-        )}
+        {emailMsg.text && <div className={emailMsg.ok ? styles.ok : styles.err}>{emailMsg.text}</div>}
         <button className={styles.btn} onClick={handleEmailSave} disabled={emailBusy}>
-          {emailBusy ? "Saving…" : "Save Email"}
+          {emailBusy ? t("profile.saving") : t("profile.saveEmail")}
         </button>
+        </div>
       </div>
 
       {/* Change Password */}
       <div className={styles.card}>
-        <div className={styles.cardHead}>Change Password</div>
+        <div className={styles.cardHead}>{t("profile.changePassword")}</div>
+        <div className={styles.cardForm}>
         <div className={styles.formRow}>
-          <label className={styles.label}>Current password</label>
+          <label className={styles.label}>{t("profile.currentPassword")}</label>
           <input className={styles.input} type="password" placeholder="••••••••"
             value={curPass} onChange={(e) => setCurPass(e.target.value)} />
         </div>
         <div className={styles.formRow}>
-          <label className={styles.label}>New password</label>
-          <input className={styles.input} type="password" placeholder="Min 8 characters"
+          <label className={styles.label}>{t("profile.newPassword")}</label>
+          <input className={styles.input} type="password" placeholder={t("profile.minChars")}
             value={newPass} onChange={(e) => setNewPass(e.target.value)} />
         </div>
         <div className={styles.formRow}>
-          <label className={styles.label}>Confirm</label>
-          <input className={styles.input} type="password" placeholder="Repeat new password"
+          <label className={styles.label}>{t("profile.confirmPassword")}</label>
+          <input className={styles.input} type="password" placeholder={t("profile.repeatPassword")}
             value={confirmPass} onChange={(e) => setConfirmPass(e.target.value)} />
         </div>
-        {passMsg.text && (
-          <div className={passMsg.ok ? styles.ok : styles.err}>{passMsg.text}</div>
-        )}
+        {passMsg.text && <div className={passMsg.ok ? styles.ok : styles.err}>{passMsg.text}</div>}
         <button className={styles.btn} onClick={handlePasswordSave} disabled={passBusy}>
-          {passBusy ? "Saving…" : "Save Password"}
+          {passBusy ? t("profile.saving") : t("profile.savePassword")}
         </button>
+        </div>
       </div>
 
     </div>

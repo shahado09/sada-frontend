@@ -17,19 +17,19 @@ async function hardDeletePack(id) {
 }
 
 export default function AdminPacks() {
-  const [packs, setPacks]         = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [busyId, setBusyId]       = useState(null);
+  const [packs, setPacks]           = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [busyId, setBusyId]         = useState(null);
   const [deletingId, setDeletingId] = useState(null);
-  const [saving, setSaving]       = useState(false);
-  const [error, setError]         = useState("");
+  const [saving, setSaving]         = useState(false);
+  const [error, setError]           = useState("");
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen]     = useState(false);
   const [editingPack, setEditingPack]   = useState(null);
 
   const [form, setForm] = useState({
-    code: "", name: "", description: "",
+    code: "", name: "", nameAr: "", description: "", descriptionAr: "",
     points: 10, priceBhd: 1, salePriceBhd: "", isActive: true,
   });
 
@@ -51,7 +51,7 @@ export default function AdminPacks() {
   useEffect(() => { load(); }, []);
 
   function resetForm() {
-    setForm({ code: "", name: "", description: "", points: 10, priceBhd: 1, salePriceBhd: "", isActive: true });
+    setForm({ code: "", name: "", nameAr: "", description: "", descriptionAr: "", points: 10, priceBhd: 1, salePriceBhd: "", isActive: true });
   }
 
   function onChange(e) {
@@ -59,7 +59,6 @@ export default function AdminPacks() {
     setForm((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
   }
 
-  // ── Create ──
   function openCreate() { setError(""); resetForm(); setIsCreateOpen(true); }
   function closeCreate() { setIsCreateOpen(false); }
 
@@ -69,8 +68,11 @@ export default function AdminPacks() {
       setError(""); setSaving(true);
       const saleNum = form.salePriceBhd === "" ? null : Number(form.salePriceBhd);
       const payload = {
-        code: form.code.trim(), name: form.name.trim(),
+        code: form.code.trim(),
+        name: form.name.trim(),
+        nameAr: form.nameAr?.trim() || "",
         description: form.description?.trim() || "",
+        descriptionAr: form.descriptionAr?.trim() || "",
         points: Number(form.points),
         prices: [{ currency: "BHD", amount: Number(form.priceBhd) }],
         salePrices: saleNum !== null && !Number.isNaN(saleNum) ? [{ currency: "BHD", amount: saleNum }] : [],
@@ -84,17 +86,20 @@ export default function AdminPacks() {
     } finally { setSaving(false); }
   }
 
-  // ── Edit ──
   function openEdit(pack) {
     setError("");
     setEditingPack(pack);
     const price = getBhdAmount(pack.prices);
     const sale  = getBhdAmount(pack.salePrices);
     setForm({
-      code: pack.code || "", name: pack.name || "",
+      code: pack.code || "",
+      name: pack.name || "",
+      nameAr: pack.nameAr || "",
       description: pack.description || "",
+      descriptionAr: pack.descriptionAr || "",
       points: pack.points ?? 10,
-      priceBhd: price ?? 0, salePriceBhd: sale ?? "",
+      priceBhd: price ?? 0,
+      salePriceBhd: sale ?? "",
       isActive: Boolean(pack.isActive),
     });
     setIsEditOpen(true);
@@ -108,7 +113,10 @@ export default function AdminPacks() {
       setError(""); setSaving(true);
       const saleNum = form.salePriceBhd === "" ? null : Number(form.salePriceBhd);
       const payload = {
-        name: form.name.trim(), description: form.description?.trim() || "",
+        name: form.name.trim(),
+        nameAr: form.nameAr?.trim() || "",
+        description: form.description?.trim() || "",
+        descriptionAr: form.descriptionAr?.trim() || "",
         points: Number(form.points),
         prices: [{ currency: "BHD", amount: Number(form.priceBhd) }],
         salePrices: saleNum !== null && !Number.isNaN(saleNum) ? [{ currency: "BHD", amount: saleNum }] : [],
@@ -122,7 +130,6 @@ export default function AdminPacks() {
     } finally { setSaving(false); }
   }
 
-  // ── Toggle Active ──
   async function toggleActive(pack) {
     try {
       setError(""); setBusyId(pack._id);
@@ -133,7 +140,6 @@ export default function AdminPacks() {
     } finally { setBusyId(null); }
   }
 
-  // ── Hard Delete  ──
   async function handleDelete(pack) {
     try {
       setError(""); setDeletingId(pack._id);
@@ -188,11 +194,11 @@ export default function AdminPacks() {
                   const effective  = sale ?? price;
                   const isRowBusy  = busyId === pack._id;
                   const isDeleting = deletingId === pack._id;
-
                   return (
                     <tr key={pack._id}>
                       <td>
                         <div className={styles.mainText}>{pack.name}</div>
+                        {pack.nameAr ? <div className={styles.muted} dir="rtl">{pack.nameAr}</div> : null}
                         {pack.description ? <div className={styles.muted}>{pack.description}</div> : null}
                       </td>
                       <td className={styles.muted}>{pack.code}</td>
@@ -206,9 +212,7 @@ export default function AdminPacks() {
                         </span>
                       </td>
                       <td className={styles.actionsCell}>
-                        <button className={styles.btnSecondarySmall} onClick={() => openEdit(pack)} disabled={isDeleting}>
-                          Edit
-                        </button>
+                        <button className={styles.btnSecondarySmall} onClick={() => openEdit(pack)} disabled={isDeleting}>Edit</button>
                         <button
                           className={pack.isActive ? styles.btnDangerSmall : styles.btnSuccessSmall}
                           onClick={() => toggleActive(pack)}
@@ -216,7 +220,6 @@ export default function AdminPacks() {
                         >
                           {isRowBusy ? "Saving..." : pack.isActive ? "Deactivate" : "Activate"}
                         </button>
-                        {/* ✅ Delete مباشر بدون confirm */}
                         <button
                           className={styles.btnDeleteSmall}
                           onClick={() => handleDelete(pack)}
@@ -234,7 +237,7 @@ export default function AdminPacks() {
         )}
       </div>
 
-      {/* Create Modal */}
+      {/* ── Create Modal ── */}
       {isCreateOpen ? (
         <div className={styles.modalOverlay} onMouseDown={closeCreate}>
           <div className={styles.modal} onMouseDown={(e) => e.stopPropagation()}>
@@ -254,8 +257,16 @@ export default function AdminPacks() {
                 </label>
               </div>
               <label className={styles.field}>
+                <span className={styles.label}>Name (Arabic) — الاسم بالعربي</span>
+                <input className={styles.input} name="nameAr" value={form.nameAr || ""} onChange={onChange} placeholder="الاسم بالعربي" dir="rtl" />
+              </label>
+              <label className={styles.field}>
                 <span className={styles.label}>Description</span>
                 <input className={styles.input} name="description" value={form.description} onChange={onChange} placeholder="Optional" />
+              </label>
+              <label className={styles.field}>
+                <span className={styles.label}>Description (Arabic) — الوصف بالعربي</span>
+                <input className={styles.input} name="descriptionAr" value={form.descriptionAr || ""} onChange={onChange} placeholder="الوصف بالعربي" dir="rtl" />
               </label>
               <div className={styles.grid4}>
                 <label className={styles.field}>
@@ -287,7 +298,7 @@ export default function AdminPacks() {
         </div>
       ) : null}
 
-      {/* Edit Modal */}
+      {/* ── Edit Modal ── */}
       {isEditOpen ? (
         <div className={styles.modalOverlay} onMouseDown={closeEdit}>
           <div className={styles.modal} onMouseDown={(e) => e.stopPropagation()}>
@@ -307,8 +318,16 @@ export default function AdminPacks() {
                 </label>
               </div>
               <label className={styles.field}>
+                <span className={styles.label}>Name (Arabic) — الاسم بالعربي</span>
+                <input className={styles.input} name="nameAr" value={form.nameAr || ""} onChange={onChange} placeholder="الاسم بالعربي" dir="rtl" />
+              </label>
+              <label className={styles.field}>
                 <span className={styles.label}>Description</span>
                 <input className={styles.input} name="description" value={form.description} onChange={onChange} />
+              </label>
+              <label className={styles.field}>
+                <span className={styles.label}>Description (Arabic) — الوصف بالعربي</span>
+                <input className={styles.input} name="descriptionAr" value={form.descriptionAr || ""} onChange={onChange} placeholder="الوصف بالعربي" dir="rtl" />
               </label>
               <div className={styles.grid4}>
                 <label className={styles.field}>

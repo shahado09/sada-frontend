@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { deleteProject, getMyProjects } from "../../services/projectService";
 import styles from "./Projects.module.css";
 
@@ -9,35 +10,27 @@ export default function ProjectsList() {
   const [msg, setMsg] = useState("");
   const [isError, setIsError] = useState(false);
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   async function load() {
     try {
-      setLoading(true);
-      setMsg("");
-      setIsError(false);
+      setLoading(true); setMsg(""); setIsError(false);
       const data = await getMyProjects();
       setProjects(data);
     } catch (e) {
       setMsg(e?.response?.data?.message || "Failed to load projects");
       setIsError(true);
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   }
 
-  useEffect(() => {
-    load();
-  }, []);
+  useEffect(() => { load(); }, []);
 
   async function handleDelete(id) {
-    const ok = confirm("Delete this project? You can restore within 30 days.");
+    const ok = confirm(t("projects.deleteModal.body", { name: "" }));
     if (!ok) return;
-
     try {
       await deleteProject(id);
       setProjects((prev) => prev.filter((p) => p._id !== id));
-      setMsg("Project deleted (30-day grace).");
-      setIsError(false);
     } catch (e) {
       setMsg(e?.response?.data?.message || "Delete failed");
       setIsError(true);
@@ -46,51 +39,42 @@ export default function ProjectsList() {
 
   return (
     <div className={styles.page}>
-
       <div className={styles.card}>
         <div className={styles.header}>
-          <h2 className={styles.title}>Projects</h2>
+          <h2 className={styles.title}>{t("projects.title")}</h2>
           <button className={styles.smallBtn + " " + styles.ghost} onClick={() => navigate("/projects/new")}>
-            + New
+            {t("projects.newBtn")}
           </button>
         </div>
-
-        <p className={styles.subtitle}>Only active projects are visible here.</p>
-
+        <p className={styles.subtitle}>{t("projects.subtitle")}</p>
         {msg && <p className={`${styles.msg} ${isError ? styles.error : styles.success}`}>{msg}</p>}
-        {loading && <p className={styles.muted}>Loading...</p>}
-
+        {loading && <p className={styles.muted}>{t("projects.loading")}</p>}
         {!loading && projects.length === 0 && (
           <div className={styles.item} style={{ marginTop: 14 }}>
-            <p className={styles.muted}>No projects yet.</p>
+            <p className={styles.muted}>{t("projects.noProjects")}</p>
             <button className={styles.button} onClick={() => navigate("/projects/new")}>
-              Create your first project
+              {t("projects.createFirst")}
             </button>
           </div>
         )}
-
         <div className={styles.grid}>
           {projects.map((p) => (
             <div className={styles.item} key={p._id}>
-              <Link className={styles.link} to={`/projects/${p._id}`}>
-                {p.title}
-              </Link>
-              <p className={styles.muted}>Category: {p.category}</p>
-
+              <Link className={styles.link} to={`/projects/${p._id}`}>{p.title}</Link>
+              <p className={styles.muted}>{t("projects.category")} {p.category}</p>
               <div className={styles.rowButtons}>
                 <button className={`${styles.smallBtn} ${styles.ghost}`} onClick={() => navigate(`/projects/${p._id}`)}>
-                  Open
+                  {t("projects.open")}
                 </button>
                 <button className={`${styles.smallBtn} ${styles.danger}`} onClick={() => handleDelete(p._id)}>
-                  Delete
+                  {t("projects.delete")}
                 </button>
               </div>
             </div>
           ))}
         </div>
-
         <p className={styles.muted} style={{ marginTop: 16 }}>
-          <Link className={styles.link} to="/dashboard">← Back to Dashboard</Link>
+          <Link className={styles.link} to="/dashboard">{t("projects.back")}</Link>
         </p>
       </div>
     </div>
