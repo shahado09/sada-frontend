@@ -3,8 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import styles from "./Login.module.css";
 import { useAuth } from "../../auth/AuthContext";
 
-const BACKEND = import.meta.env.VITE_API_BASE_URL?.replace("/api", "") || "https://sada-backend-production.up.railway.app";
-
+const BACKEND = "https://sada-backend-production.up.railway.app";
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();

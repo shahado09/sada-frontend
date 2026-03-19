@@ -4,7 +4,7 @@ import styles from "./Signup.module.css";
 import { useAuth } from "../../auth/AuthContext";
 import { signupSchema } from "./signup.schema";
 
-const BACKEND = import.meta.env.VITE_API_BASE_URL?.replace("/api", "") || "https://sada-backend-production.up.railway.app";
+const BACKEND = "https://sada-backend-production.up.railway.app";
 
 export default function Signup() {
   const { signup } = useAuth();
