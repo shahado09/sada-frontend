@@ -177,20 +177,21 @@ export function AuthProvider({ children }) {
     saveUser(null);
   };
 
-  const value = useMemo(
-    () => ({
-      accessToken,
-      user,
-      authLoading,
-      isAuthenticated: Boolean(accessToken),
-      login,
-      signup,
-      logout,
-      loadMe,
-      setUser: saveUser,
-    }),
-    [accessToken, user, authLoading]
-  );
+const value = useMemo(
+  () => ({
+    accessToken,
+    user,
+    authLoading,
+    isAuthenticated: Boolean(accessToken),
+    login,
+    signup,
+    logout,
+    loadMe,
+    saveToken,
+    setUser: saveUser,
+  }),
+  [accessToken, user, authLoading]
+);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

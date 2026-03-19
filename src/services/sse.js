@@ -2,10 +2,7 @@ let controller = null;
 let onEventCallback = null;
 
 function apiBase() {
-  const env = import.meta?.env?.VITE_API_URL || import.meta?.env?.VITE_API_BASE;
-  if (env) return String(env).replace(/\/$/, "");
-  return "http://localhost:3000";
-}
+  const env = import.meta?.env?.VITE_API_BASE_URL || import.meta?.env?.VITE_API_URL || import.meta?.env?.VITE_API_BASE;}
 
 const SSE_EVENTS = [
   "credits", "credits.updated", "output_created",
