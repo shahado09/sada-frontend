@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import styles from "./Login.module.css";
 import { useAuth } from "../../auth/AuthContext";
 
-const BACKEND = "https://sada-backend-production.up.railway.app";
+const BACKEND = "https://api.sadavisualstudio.com";
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -75,6 +75,13 @@ export default function Login() {
                 </svg>
               )}
             </button>
+          </div>
+
+
+          <div style={{ textAlign: "right", marginTop: -4 }}>
+            <Link to="/forgot-password" style={{ fontSize: 13, color: "var(--muted)", textDecoration: "underline" }}>
+              Forgot password?
+            </Link>
           </div>
 
           <button className={styles.button} type="submit" disabled={loading}>

@@ -4,7 +4,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api
 
 const api = axios.create({
   baseURL: API_BASE,
-  withCredentials: true, 
+  withCredentials: true,
 });
 
 export function setupInterceptors({ getToken, setToken, onLogout }) {
@@ -31,8 +31,12 @@ export function setupInterceptors({ getToken, setToken, onLogout }) {
       original._retry = true;
 
       try {
+        const r = await axios.post(
+          `${API_BASE}/auth/refresh`,
+          {},
+          { withCredentials: true }
+        );
 
-        const r = await api.post("/auth/refresh");
         const newToken = r.data.accessToken;
         if (!newToken) throw new Error("No accessToken returned from refresh");
 
@@ -48,4 +52,3 @@ export function setupInterceptors({ getToken, setToken, onLogout }) {
 }
 
 export default api;
-

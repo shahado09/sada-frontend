@@ -7,6 +7,7 @@ import MainLayout from "./layouts/MainLayout";
 
 import Login from "./pages/login/Login";
 import Signup from "./pages/Signup/Signup";
+import ForgotPasswordPage from "./pages/login/ForgotPasswordPage";
 import GoogleSuccessPage from "./pages/GoogleSuccess/GoogleSuccessPage";
 import VerifyEmailPage from "./pages/VerifyEmail/VerifyEmailPage";
 import ProfilePage from "./pages/Profile/ProfilePage";
@@ -49,6 +50,7 @@ export default function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/auth/google/success" element={<GoogleSuccessPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/policy" element={<PolicyPage />} />
 
           {/* Plans & Packs — public (view only) */}
